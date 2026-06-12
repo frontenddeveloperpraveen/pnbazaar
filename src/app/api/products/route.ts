@@ -1,18 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
-import { PRODUCTS as initialProducts } from "../../../data/db";
 
 export async function GET() {
   try {
     const db = await getDatabase();
     const collection = db.collection("products");
-    
-    // Count existing products
-    const count = await collection.countDocuments();
-    if (count === 0) {
-      // Insert initial fallback products if db is empty
-      await collection.insertMany(initialProducts);
-    }
     
     const products = await collection.find({}).toArray();
     

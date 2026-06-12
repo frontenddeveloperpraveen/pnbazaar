@@ -6,26 +6,6 @@ export async function GET() {
     const db = await getDatabase();
     const collection = db.collection("analytics");
 
-    // Seed default analytics data if empty to ensure dashboard has beautiful initial visual data
-    const count = await collection.countDocuments();
-    if (count === 0) {
-      const seedEvents = [
-        { type: "pageview", page: "/", location: "Delhi", timestamp: new Date(Date.now() - 3600000 * 2), buttonText: "", sessionId: "sess_seed_1", duration: 12 },
-        { type: "pageview", page: "/product/classic-minimalist-backpack", location: "Maharashtra", timestamp: new Date(Date.now() - 3600000 * 1.8), buttonText: "", sessionId: "sess_seed_2", duration: 45 },
-        { type: "click", page: "/product/classic-minimalist-backpack", location: "Maharashtra", timestamp: new Date(Date.now() - 3600000 * 1.7), buttonText: "Add to Cart: Classic Minimalist Backpack (Qty: 1)", sessionId: "sess_seed_2", duration: 0 },
-        { type: "pageview", page: "/cart", location: "Maharashtra", timestamp: new Date(Date.now() - 3600000 * 1.6), buttonText: "", sessionId: "sess_seed_2", duration: 15 },
-        { type: "click", page: "/cart", location: "Maharashtra", timestamp: new Date(Date.now() - 3600000 * 1.5), buttonText: "Apply Coupon: WELCOME10", sessionId: "sess_seed_2", duration: 0 },
-        { type: "click", page: "/cart", location: "Maharashtra", timestamp: new Date(Date.now() - 3600000 * 1.4), buttonText: "Checkout Success: Order ₹4200", sessionId: "sess_seed_2", duration: 0 },
-        { type: "pageview", page: "/", location: "Karnataka", timestamp: new Date(Date.now() - 3600000 * 1.2), buttonText: "", sessionId: "sess_seed_3", duration: 8 },
-        { type: "pageview", page: "/product/insulated-tumbler", location: "Karnataka", timestamp: new Date(Date.now() - 3600000 * 1.1), buttonText: "", sessionId: "sess_seed_3", duration: 32 },
-        { type: "pageview", page: "/product/matte-ceramic-mugs", location: "Delhi", timestamp: new Date(Date.now() - 3000000), buttonText: "", sessionId: "sess_seed_4", duration: 19 },
-        { type: "click", page: "/product/matte-ceramic-mugs", location: "Delhi", timestamp: new Date(Date.now() - 2800000), buttonText: "Add to Cart: Matte Ceramic Mugs (Qty: 2)", sessionId: "sess_seed_4", duration: 0 },
-        { type: "pageview", page: "/product/classic-minimalist-backpack", location: "Tamil Nadu", timestamp: new Date(Date.now() - 1800000), buttonText: "", sessionId: "sess_seed_5", duration: 25 },
-        { type: "click", page: "/product/classic-minimalist-backpack", location: "Tamil Nadu", timestamp: new Date(Date.now() - 1700000), buttonText: "Add to Cart: Classic Minimalist Backpack (Qty: 1)", sessionId: "sess_seed_5", duration: 0 }
-      ];
-      await collection.insertMany(seedEvents);
-    }
-
     const events = await collection.find({}).sort({ timestamp: -1 }).limit(200).toArray();
 
     // Perform overall aggregations
