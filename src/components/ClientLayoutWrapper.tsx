@@ -17,6 +17,50 @@ export default function ClientLayoutWrapper({
   
   const pathnameRef = useRef(pathname);
   const startTimeRef = useRef(Date.now());
+  const isFirstRender = useRef(true);
+
+  const [showLoader, setShowLoader] = React.useState(true);
+  const [isFadingOut, setIsFadingOut] = React.useState(false);
+
+  // Initial mount loader
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => {
+      setIsFadingOut(true);
+    }, 1200);
+
+    const removeTimer = setTimeout(() => {
+      setShowLoader(false);
+    }, 1800);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+    };
+  }, []);
+
+  // Route transition loader
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    setIsFadingOut(false);
+    setShowLoader(true);
+
+    const fadeTimer = setTimeout(() => {
+      setIsFadingOut(true);
+    }, 600);
+
+    const removeTimer = setTimeout(() => {
+      setShowLoader(false);
+    }, 1200);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+    };
+  }, [pathname]);
 
   // Track page view and handle dwell time tracking on tab switch or close
   useEffect(() => {
@@ -60,9 +104,23 @@ export default function ClientLayoutWrapper({
     startTimeRef.current = Date.now();
   }, [pathname, isAdmin]);
 
+  const loaderOverlay = showLoader && (
+    <div className={`logo-loader-overlay ${isFadingOut ? "fade-out" : ""}`}>
+      <div className="logo-loader-content">
+        <img
+          src="/logo.png"
+          alt="PN Bazaar Logo"
+          className="logo-loader-img"
+        />
+        <div className="logo-loader-bar" />
+      </div>
+    </div>
+  );
+
   if (isAdmin) {
     return (
       <>
+        {loaderOverlay}
         <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
           {children}
         </main>
@@ -72,6 +130,7 @@ export default function ClientLayoutWrapper({
 
   return (
     <>
+      {loaderOverlay}
       <Header />
       <CartDrawer />
       <main style={{ marginTop: "110px", minHeight: "calc(100vh - 110px - 380px)", display: "flex", flexDirection: "column" }}>
