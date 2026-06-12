@@ -170,6 +170,8 @@ const STATES_AND_CITIES: Record<string, string[]> = {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    const currentSession = session;
+    if (!currentSession) return;
     setSubmitting(true);
 
     const billingFull = buildAddress(billingAddressLine1, billingAddressLine2, billingLandmark, billingCity, billingState, billingPincode);
@@ -245,7 +247,7 @@ const STATES_AND_CITIES: Record<string, string[]> = {
             // Secure Payment Verification
             try {
               const orderPayload = {
-                items: session.cart,
+                items: currentSession.cart,
                 total: total,
                 customerInfo: {
                   name: billingName,
@@ -271,7 +273,7 @@ const STATES_AND_CITIES: Record<string, string[]> = {
                   giftWrap: giftWrap || undefined,
                   giftNote: giftNote.trim() || undefined,
                 },
-                appliedCoupon: session.discountCode || undefined,
+                appliedCoupon: currentSession.discountCode || undefined,
                 cashbackApplied: undefined,
                 defaultOrdered: true
               };
