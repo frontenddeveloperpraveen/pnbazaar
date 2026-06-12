@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import Header from "./Header";
 import Footer from "./Footer";
@@ -131,7 +131,9 @@ export default function ClientLayoutWrapper({
   return (
     <>
       {loaderOverlay}
-      <Header />
+      <Suspense fallback={<div style={{ height: "110px" }} />}>
+        <Header />
+      </Suspense>
       <CartDrawer />
       <main style={{ marginTop: "110px", minHeight: "calc(100vh - 110px - 380px)", display: "flex", flexDirection: "column" }}>
         {children}

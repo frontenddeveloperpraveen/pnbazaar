@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import OrdersClient from "./OrdersClient";
 
 export const metadata: Metadata = {
@@ -27,5 +28,9 @@ export const metadata: Metadata = {
 };
 
 export default function OrdersPage() {
-  return <OrdersClient />;
+  return (
+    <Suspense fallback={<div style={{ padding: "80px", textAlign: "center" }}>Loading Orders...</div>}>
+      <OrdersClient />
+    </Suspense>
+  );
 }

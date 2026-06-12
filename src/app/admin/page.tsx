@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import AdminClient from "./AdminClient";
 
 export const metadata: Metadata = {
@@ -27,5 +28,9 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminClient />;
+  return (
+    <Suspense fallback={<div style={{ padding: "80px", textAlign: "center" }}>Loading Admin Portal...</div>}>
+      <AdminClient />
+    </Suspense>
+  );
 }
