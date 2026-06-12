@@ -1,0 +1,253 @@
+.container {
+  max-width: 1300px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 24px 100px;
+  animation: fadeIn var(--transition-normal) forwards;
+}
+
+/* Category Header Banner */
+.header {
+  position: relative;
+  height: 280px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 48px;
+  color: white;
+  margin-bottom: 48px;
+}
+
+.headerOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, rgba(18, 18, 18, 0.85) 30%, rgba(0, 0, 0, 0.4) 100%);
+  z-index: 2;
+}
+
+.bannerImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.headerContent {
+  position: relative;
+  z-index: 3;
+  max-width: 600px;
+}
+
+.collectionTag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--primary);
+  letter-spacing: 2px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 42px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  letter-spacing: -1.5px;
+}
+
+.desc {
+  font-size: 15px;
+  color: #d6d3d1;
+  line-height: 1.6;
+}
+
+/* Layout */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 40px;
+}
+
+/* Sidebar Filters */
+.filters {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  height: fit-content;
+  position: sticky;
+  top: 100px;
+}
+
+.filterTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.filterGroup {
+  margin-bottom: 24px;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-base);
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.select:focus {
+  border-color: var(--primary);
+}
+
+.sliderLabelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.priceVal {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 15px;
+}
+
+.slider {
+  width: 100%;
+  accent-color: var(--primary);
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: 3px;
+  outline: none;
+}
+
+.sliderLimits {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Products Main Grid */
+.mainGrid {
+  width: 100%;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+}
+
+.empty {
+  text-align: center;
+  padding: 60px 24px;
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.empty h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.empty p {
+  color: var(--text-muted);
+}
+
+/* Category Not Found */
+.notFound {
+  text-align: center;
+  padding: 120px 24px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.notFound h2 {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.notFound p {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.backBtn {
+  display: inline-block;
+  background-color: var(--primary);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 100px;
+  font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .filters {
+    position: relative;
+    top: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .filterTitle {
+    grid-column: span 2;
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: auto;
+    padding: 32px 24px;
+  }
+  .title {
+    font-size: 30px;
+  }
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+  .filterTitle {
+    grid-column: span 1;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
