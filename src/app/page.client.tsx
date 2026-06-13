@@ -163,13 +163,13 @@ export default function HomePageClient() {
       {/* Hot Deals Promo */}
       <section className={styles.promoBanner}>
         <div className={styles.promoContent}>
-          <span className={styles.promoTag}>SEASONAL COLLECTION SPECIALS</span>
-          <h2 className={styles.promoTitle}>Hand-Crafted Goods Up to 20% Off</h2>
+          <span className={styles.promoTag}>EXCLUSIVE ONLINE PREPAYMENT OFFER</span>
+          <h2 className={styles.promoTitle}>Pay Online & Get Extra Flat 10% Off</h2>
           <p className={styles.promoDesc}>
-            Upgrade your daily commute and workspace setup with our sustainable wool felt pads and canvas carry gear.
+            Enjoy instant checkout savings! Choose digital payment options during checkout to receive an automatic 10% discount on your entire cart.
           </p>
-          <Link href="/search?q=felt" className={styles.promoBtn}>
-            Shop Workspace Essentials
+          <Link href="/category/home-office" className={styles.promoBtn}>
+            Shop Best Sellers
           </Link>
         </div>
       </section>

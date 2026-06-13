@@ -13,22 +13,33 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
-  const { addToCart, createCheckoutSession, setCartDrawerOpen, clearCart } = useCart();
+  const { cart, addToCart, createCheckoutSession, setCartDrawerOpen, clearCart } = useCart();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
-    setCartDrawerOpen(true);
+    addToCart(product, 1, true);
   };
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    clearCart();
-    addToCart(product, 1);
-    const sessionId = createCheckoutSession();
-    if (sessionId) router.push(`/checkout/${sessionId}`);
+    
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (isMobile) {
+      const existingItem = cart.find((item) => item.product.id === product.id);
+      if (existingItem && existingItem.quantity > 1) {
+        setCartDrawerOpen(true);
+      } else {
+        addToCart(product, 1);
+        setCartDrawerOpen(true);
+      }
+    } else {
+      clearCart();
+      addToCart(product, 1);
+      const sessionId = createCheckoutSession();
+      if (sessionId) router.push(`/checkout/${sessionId}`);
+    }
   };
 
   return (

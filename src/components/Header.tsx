@@ -95,7 +95,7 @@ export const Header: React.FC = () => {
       {/* Shopify-style Announcement Bar */}
       <div className={`${styles.announcementBar} ${isScrolled ? styles.announcementHidden : ""} ${isCheckout ? styles.checkoutHide : ""}`}>
         <p className={styles.announcementText}>
-          Free shipping on orders • Easy 7-day returns
+          Free shipping on orders
         </p>
       </div>
 
@@ -142,26 +142,6 @@ export const Header: React.FC = () => {
             </div>
             <Link href="/orders" className={styles.navLink}>My Orders</Link>
           </nav>
-
-          {/* Cart Trigger (desktop) */}
-          <div className={`${styles.actions} ${isCheckout ? styles.checkoutHide : ""}`}>
-            <button onClick={handleCartClick} className={styles.cartBtn} aria-label="Shopping Cart">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.cartIcon}>
-                <circle cx="9" cy="21" r="1"></circle>
-                <circle cx="20" cy="21" r="1"></circle>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-              </svg>
-              {getCartCount() > 0 && (
-                <span className={styles.cartBadge}>{getCartCount()}</span>
-              )}
-            </button>
-          </div>
-
-          {isCheckout && (
-            <Link href="/cart" className={styles.checkoutCancel}>
-              Cancel
-            </Link>
-          )}
 
           {/* Search — hidden on product detail pages */}
           {!pathname.startsWith("/product/") && !isCheckout && (
@@ -212,6 +192,26 @@ export const Header: React.FC = () => {
               </div>
             )}
           </div>
+          )}
+
+          {/* Cart Trigger (desktop) */}
+          <div className={`${styles.actions} ${isCheckout ? styles.checkoutHide : ""}`}>
+            <button onClick={handleCartClick} className={styles.cartBtn} aria-label="Shopping Cart">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.cartIcon}>
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+              {getCartCount() > 0 && (
+                <span className={styles.cartBadge}>{getCartCount()}</span>
+              )}
+            </button>
+          </div>
+
+          {isCheckout && (
+            <Link href="/cart" className={styles.checkoutCancel}>
+              Cancel
+            </Link>
           )}
         </div>
       </header>

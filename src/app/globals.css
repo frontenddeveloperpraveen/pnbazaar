@@ -72,13 +72,15 @@ a {
   transition: color var(--transition-fast), opacity var(--transition-fast);
 }
 
-input, select, textarea, button {
+input, select, textarea, button, a {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
   background: none;
   border: none;
   outline: none;
+  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 button {

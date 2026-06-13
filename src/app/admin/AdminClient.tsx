@@ -48,6 +48,8 @@ function AdminPageContent() {
     products,
     promoCodes,
     updateOrderStatus,
+    archiveOrder,
+    deleteOrder,
     refreshOrders,
     addProduct,
     updateProduct,
@@ -94,6 +96,12 @@ function AdminPageContent() {
   const [expandedCheckoutId, setExpandedCheckoutId] = useState<string | null>(null);
   const [newAbCheckoutCount, setNewAbCheckoutCount] = useState(0);
   const [lastAbCheckoutView, setLastAbCheckoutView] = useState(Date.now());
+  const [checkoutLogsId, setCheckoutLogsId] = useState<string | null>(null);
+  const [checkoutLogInput, setCheckoutLogInput] = useState("");
+  const [selectedCheckouts, setSelectedCheckouts] = useState<Set<string>>(new Set());
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [mapData, setMapData] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   // Reviews state
@@ -168,7 +176,7 @@ function AdminPageContent() {
   };
 
   React.useEffect(() => {
-    if (activeTab === "analytics") {
+    if (activeTab === "analytics" || activeTab === "aborted-cart" || activeTab === "abandoned-checkouts") {
       fetchAnalytics();
       const interval = setInterval(fetchAnalytics, 15000);
       return () => clearInterval(interval);
@@ -381,6 +389,10 @@ function AdminPageContent() {
     return () => { mounted = false; clearInterval(interval); };
   }, [lastAbCheckoutView]);
 
+  React.useEffect(() => {
+    setSelectedOrders(new Set());
+  }, [orderFilter]);
+
   const toggleSelect = (id: string) => {
     setSelectedCarts(prev => {
       const next = new Set(prev);
@@ -406,6 +418,109 @@ function AdminPageContent() {
   const deleteAbandonedCheckout = async (sessionId: string) => {
     await fetch(`/api/abandoned-checkouts?sessionId=${encodeURIComponent(sessionId)}`, { method: "DELETE" });
     setAbandonedCheckouts(prev => prev.filter(c => c.sessionId !== sessionId));
+  };
+
+  const updateCheckout = async (sessionId: string, updates: any) => {
+    await fetch("/api/abandoned-checkouts", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, ...updates })
+    });
+    setAbandonedCheckouts(prev => prev.map(c => c.sessionId === sessionId ? { ...c, ...updates } : c));
+  };
+
+  const addCheckoutLogEntry = async (sessionId: string, type: string, message: string) => {
+    const co = abandonedCheckouts.find(c => c.sessionId === sessionId);
+    const logs = [...(co?.followUpLogs || []), { type, sentAt: new Date().toISOString(), message }];
+    await updateCheckout(sessionId, { followUpLogs: logs });
+  };
+
+  const toggleCheckoutSelect = (sessionId: string) => {
+    setSelectedCheckouts(prev => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) next.delete(sessionId); else next.add(sessionId);
+      return next;
+    });
+  };
+
+  const handleBulkDeleteCarts = async () => {
+    if (selectedCarts.size === 0) return;
+    if (!window.confirm(`Delete ${selectedCarts.size} selected aborted cart(s)?`)) return;
+    const promises = Array.from(selectedCarts).map(id => deleteCart(id));
+    await Promise.all(promises);
+    setSelectedCarts(new Set());
+  };
+
+  const handleBulkDeleteCheckouts = async () => {
+    if (selectedCheckouts.size === 0) return;
+    if (!window.confirm(`Delete ${selectedCheckouts.size} selected abandoned checkout(s)?`)) return;
+    const promises = Array.from(selectedCheckouts).map(id => deleteAbandonedCheckout(id));
+    await Promise.all(promises);
+    setSelectedCheckouts(new Set());
+  };
+
+  const renderSessionTimeline = (targetSessionId: string) => {
+    if (!targetSessionId || !analyticsData || !analyticsData.clickstreams) return null;
+    const session = analyticsData.clickstreams.find((s: any) => s.sessionId === targetSessionId);
+    if (!session || !session.events || session.events.length === 0) return null;
+
+    // Merge dwell times into page views to avoid double-rendering page views and their dwell metrics
+    const timelineEvents: any[] = [];
+    session.events.forEach((ev: any) => {
+      if (ev.type === "pageview") {
+        timelineEvents.push({ ...ev });
+      } else if (ev.type === "dwell") {
+        const lastPv = [...timelineEvents].reverse().find(t => t.type === "pageview" && t.page === ev.page);
+        if (lastPv) {
+          lastPv.duration = ev.duration;
+        } else {
+          timelineEvents.push(ev);
+        }
+      } else {
+        timelineEvents.push(ev);
+      }
+    });
+
+    return (
+      <div style={{ marginTop: "12px", borderTop: "1px solid #f0f0f0", paddingTop: "12px" }}>
+        <strong style={{ fontSize: "12px", display: "block", marginBottom: "8px", color: "#111827" }}>
+          User Storefront Activity Trail
+        </strong>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderLeft: "2px solid #008060", marginLeft: "6px", paddingLeft: "14px" }}>
+          {timelineEvents.map((ev: any, idx: number) => {
+            const formattedTime = new Date(ev.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+            return (
+              <div key={idx} style={{ position: "relative", fontSize: "11px", lineHeight: "1.4" }}>
+                <div style={{
+                  position: "absolute",
+                  left: "-18px",
+                  top: "4px",
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background: ev.type === "click" ? "#0284c7" : "#008060",
+                  border: "2px solid #fff"
+                }} />
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
+                  <span>
+                    {ev.type === "pageview" && (
+                      <span>Visited <code style={{ background: "#fff", border: "1px solid #e1e3e5", padding: "1px 4px", borderRadius: "3px", fontSize: "10px" }}>{ev.page}</code> {ev.duration > 0 && `(stayed ${ev.duration}s)`}</span>
+                    )}
+                    {ev.type === "click" && (
+                      <span>Clicked <strong style={{ color: "#0284c7" }}>"{ev.buttonText}"</strong> on <code style={{ fontSize: "10px" }}>{ev.page}</code></span>
+                    )}
+                    {ev.type === "dwell" && (
+                      <span>Dwell: Stayed on <code style={{ fontSize: "10px" }}>{ev.page}</code> for {ev.duration}s</span>
+                    )}
+                  </span>
+                  <span style={{ color: "var(--text-muted)", fontSize: "9px" }}>{formattedTime}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const addLogEntry = async (id: string, type: string, message: string) => {
@@ -1295,25 +1410,99 @@ function AdminPageContent() {
 
         {/* TAB 2: ORDERS MANAGEMENT */}
         {activeTab === "orders" && (() => {
-          const STATUS_LIST = ["Pending", "Processing", "Shipped", "Delivered", "OnHold", "Return", "Cancelled", "Archived"];
+          const STATUS_LIST = ["Pending", "Processing", "Shipped", "Delivered", "Return", "Cancelled"];
           const STATUS_COLORS: Record<string, string> = {
             Pending: "#fef3c7", Processing: "#fef3c7", Shipped: "#dbeafe", Delivered: "#d1fae5",
-            OnHold: "#ffe4e6", Return: "#ffedd5", Cancelled: "#f3f4f6", Archived: "#f3f4f6"
+            Return: "#ffedd5", Cancelled: "#f3f4f6", Archived: "#f3f4f6"
           };
           const STATUS_TEXT_COLORS: Record<string, string> = {
             Pending: "#92400e", Processing: "#92400e", Shipped: "#1e40af", Delivered: "#065f46",
-            OnHold: "#9f1239", Return: "#9a3412", Cancelled: "#6b7280", Archived: "#6b7280"
+            Return: "#9a3412", Cancelled: "#6b7280", Archived: "#6b7280"
           };
           const statusCounts: Record<string, number> = {};
-          STATUS_LIST.forEach(s => statusCounts[s] = orders.filter((o: any) => o.status === s).length);
+          STATUS_LIST.forEach(s => statusCounts[s] = orders.filter((o: any) => o.status === s && !o.archived).length);
 
-          const filteredOrders = orderFilter === "all" ? orders : orders.filter((o: any) => o.status === orderFilter);
+          const filteredOrders = orderFilter === "all"
+            ? orders.filter((o: any) => !o.archived)
+            : orderFilter === "Archived"
+            ? orders.filter((o: any) => o.archived)
+            : orders.filter((o: any) => o.status === orderFilter && !o.archived);
+
+          const toggleSelectOrder = (id: string) => {
+            setSelectedOrders(prev => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id); else next.add(id);
+              return next;
+            });
+          };
+
+          const toggleSelectAllOrders = (visibleOrders: any[]) => {
+            setSelectedOrders(prev => {
+              const allSelected = visibleOrders.length > 0 && visibleOrders.every(o => prev.has(o.id));
+              const next = new Set(prev);
+              if (allSelected) {
+                visibleOrders.forEach(o => next.delete(o.id));
+              } else {
+                visibleOrders.forEach(o => next.add(o.id));
+              }
+              return next;
+            });
+          };
+
+          const handleBulkArchive = async (archiveVal: boolean) => {
+            const promises = Array.from(selectedOrders).map(id => archiveOrder(id, archiveVal));
+            await Promise.all(promises);
+            setSelectedOrders(new Set());
+          };
+
+          const handleBulkDeleteOrders = async () => {
+            if (selectedOrders.size === 0) return;
+            if (!window.confirm(`Delete ${selectedOrders.size} selected order(s)?`)) return;
+            const promises = Array.from(selectedOrders).map(id => deleteOrder(id));
+            await Promise.all(promises);
+            setSelectedOrders(new Set());
+          };
 
           return (
             <div className={styles.tabContent}>
               <div className={styles.tabTitleArea}>
-                <h3>Order Management</h3>
-                <p>View, process, and fulfill customer orders</p>
+                <div>
+                  <h3>Order Management</h3>
+                  <p>View, process, and fulfill customer orders</p>
+                </div>
+                {selectedOrders.size > 0 && (
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: "500" }}>
+                      {selectedOrders.size} selected
+                    </span>
+                    <button
+                      onClick={() => handleBulkArchive(orderFilter !== "Archived")}
+                      className={styles.btnSecondary}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: "13px",
+                        borderColor: orderFilter === "Archived" ? "#008060" : "#6b7280",
+                        color: orderFilter === "Archived" ? "#008060" : "#6b7280",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {orderFilter === "Archived" ? "Unarchive" : "Archive"}
+                    </button>
+                    <button
+                      onClick={handleBulkDeleteOrders}
+                      className={styles.btnSecondary}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: "13px",
+                        borderColor: "#ef4444",
+                        color: "#ef4444",
+                        cursor: "pointer"
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Status Tabs */}
@@ -1323,7 +1512,7 @@ function AdminPageContent() {
                   className={`${styles.statusTab} ${orderFilter === "all" ? styles.statusTabActive : ""}`}
                 >
                   All
-                  <span className={styles.statusTabCount}>{orders.length}</span>
+                  <span className={styles.statusTabCount}>{orders.filter((o: any) => !o.archived).length}</span>
                 </button>
                 {STATUS_LIST.map(s => (
                   <button
@@ -1340,6 +1529,18 @@ function AdminPageContent() {
                     <span className={styles.statusTabCount}>{statusCounts[s]}</span>
                   </button>
                 ))}
+                <button
+                  onClick={() => setOrderFilter("Archived")}
+                  className={`${styles.statusTab} ${orderFilter === "Archived" ? styles.statusTabActive : ""}`}
+                  style={orderFilter === "Archived" ? {
+                    borderBottomColor: "#6b7280",
+                    color: "#6b7280"
+                  } : {}}
+                >
+                  <span className={styles.statusDot} style={{ backgroundColor: "#6b7280" }} />
+                  Archived
+                  <span className={styles.statusTabCount}>{orders.filter((o: any) => o.archived).length}</span>
+                </button>
               </div>
 
               {/* Orders Table */}
@@ -1347,6 +1548,13 @@ function AdminPageContent() {
                 <table className={styles.shopifyTable}>
                   <thead>
                     <tr>
+                      <th style={{ width: "40px", textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={filteredOrders.length > 0 && filteredOrders.every(o => selectedOrders.has(o.id))}
+                          onChange={() => toggleSelectAllOrders(filteredOrders)}
+                        />
+                      </th>
                       <th style={{ width: "50px" }}>Image</th>
                       <th>Product</th>
                       <th style={{ width: "80px" }}>Variant</th>
@@ -1358,9 +1566,16 @@ function AdminPageContent() {
                   </thead>
                   <tbody>
                     {filteredOrders.length === 0 ? (
-                      <tr><td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>No orders found</td></tr>
+                      <tr><td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>No orders found</td></tr>
                     ) : filteredOrders.map((order: any) => (
                       <tr key={order.id} style={{ cursor: "pointer" }} onClick={() => router.push(`/admin/order/${order.id}`)}>
+                        <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedOrders.has(order.id)}
+                            onChange={() => toggleSelectOrder(order.id)}
+                          />
+                        </td>
                         <td>
                           {order.items?.[0]?.product?.image ? (
                             <img src={order.items[0].product.image} alt="" style={{ width: "40px", height: "40px", borderRadius: "4px", objectFit: "cover" }} />
@@ -3055,6 +3270,38 @@ function AdminPageContent() {
                   <h3>Aborted Carts</h3>
                   <p>Carts that were abandoned before checkout. Recover them with follow-up actions.</p>
                 </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  {abandonedCarts.length > 0 && (
+                    <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", userSelect: "none" }}>
+                      <input
+                        type="checkbox"
+                        checked={abandonedCarts.length > 0 && abandonedCarts.every(c => selectedCarts.has(c._id))}
+                        onChange={() => {
+                          const allSelected = abandonedCarts.every(c => selectedCarts.has(c._id));
+                          setSelectedCarts(prev => {
+                            const next = new Set(prev);
+                            if (allSelected) {
+                              abandonedCarts.forEach(c => next.delete(c._id));
+                            } else {
+                              abandonedCarts.forEach(c => next.add(c._id));
+                            }
+                            return next;
+                          });
+                        }}
+                      />
+                      Select All
+                    </label>
+                  )}
+                  {selectedCarts.size > 0 && (
+                    <button
+                      onClick={handleBulkDeleteCarts}
+                      className={styles.btnSecondary}
+                      style={{ borderColor: "#ef4444", color: "#ef4444", padding: "6px 12px", fontSize: "13px", cursor: "pointer" }}
+                    >
+                      Delete Selected ({selectedCarts.size})
+                    </button>
+                  )}
+                </div>
               </div>
 
               {loadingCarts ? (
@@ -3078,6 +3325,11 @@ function AdminPageContent() {
                             <span style={{ fontSize: "11px", color: "var(--text-muted)", marginLeft: "8px" }}>
                               {cart.email && `📧 ${cart.email}`}{cart.phone && ` · 📱 ${cart.phone}`}
                             </span>
+                            {cart.ipLocation && (
+                              <span style={{ fontSize: "11px", color: "var(--text-muted)", marginLeft: "12px" }}>
+                                📍 {cart.ipLocation}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -3105,30 +3357,35 @@ function AdminPageContent() {
                       </div>
 
                       {/* Expanded Items */}
-                      {expandedId === cart._id && cart.items && (
-                        <div style={{ marginTop: "10px", borderTop: "1px solid #f0f0f0", paddingTop: "12px" }}>
-                          <table style={{ width: "100%", fontSize: "12px", borderCollapse: "collapse" }}>
-                            <thead>
-                              <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                                <th style={{ textAlign: "left", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Product</th>
-                                <th style={{ textAlign: "right", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Qty</th>
-                                <th style={{ textAlign: "right", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Price</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {cart.items.map((item: any, idx: number) => (
-                                <tr key={idx} style={{ borderBottom: "1px solid #f9fafb" }}>
-                                  <td style={{ padding: "6px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                                    {item.image && <img src={item.image} alt="" style={{ width: "28px", height: "28px", borderRadius: "4px", objectFit: "cover" }} />}
-                                    <span>{item.name}</span>
-                                  </td>
-                                  <td style={{ textAlign: "right", padding: "6px 8px" }}>{item.quantity}</td>
-                                  <td style={{ textAlign: "right", padding: "6px 8px", fontWeight: 600 }}>₹{(item.price * item.quantity).toLocaleString("en-IN")}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                      {expandedId === cart._id && (
+                        <>
+                          {cart.items && (
+                            <div style={{ marginTop: "10px", borderTop: "1px solid #f0f0f0", paddingTop: "12px" }}>
+                              <table style={{ width: "100%", fontSize: "12px", borderCollapse: "collapse" }}>
+                                <thead>
+                                  <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
+                                    <th style={{ textAlign: "left", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Product</th>
+                                    <th style={{ textAlign: "right", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Qty</th>
+                                    <th style={{ textAlign: "right", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Price</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {cart.items.map((item: any, idx: number) => (
+                                    <tr key={idx} style={{ borderBottom: "1px solid #f9fafb" }}>
+                                      <td style={{ padding: "6px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        {item.image && <img src={item.image} alt="" style={{ width: "28px", height: "28px", borderRadius: "4px", objectFit: "cover" }} />}
+                                        <span>{item.name}</span>
+                                      </td>
+                                      <td style={{ textAlign: "right", padding: "6px 8px" }}>{item.quantity}</td>
+                                      <td style={{ textAlign: "right", padding: "6px 8px", fontWeight: 600 }}>₹{(item.price * item.quantity).toLocaleString("en-IN")}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                          {renderSessionTimeline(cart.sessionId)}
+                        </>
                       )}
 
                       {/* Action Buttons */}
@@ -3262,7 +3519,39 @@ function AdminPageContent() {
               <div className={styles.tabTitleArea}>
                 <div>
                   <h3>Abandoned Checkouts</h3>
-                  <p>Checkout sessions that were started but never completed. Includes customer location data.</p>
+                  <p>Checkout sessions that were started but never completed. Includes customer location &amp; form data.</p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  {abandonedCheckouts.length > 0 && (
+                    <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", userSelect: "none" }}>
+                      <input
+                        type="checkbox"
+                        checked={abandonedCheckouts.length > 0 && abandonedCheckouts.every(c => selectedCheckouts.has(c.sessionId))}
+                        onChange={() => {
+                          const allSelected = abandonedCheckouts.every(c => selectedCheckouts.has(c.sessionId));
+                          setSelectedCheckouts(prev => {
+                            const next = new Set(prev);
+                            if (allSelected) {
+                              abandonedCheckouts.forEach(c => next.delete(c.sessionId));
+                            } else {
+                              abandonedCheckouts.forEach(c => next.add(c.sessionId));
+                            }
+                            return next;
+                          });
+                        }}
+                      />
+                      Select All
+                    </label>
+                  )}
+                  {selectedCheckouts.size > 0 && (
+                    <button
+                      onClick={handleBulkDeleteCheckouts}
+                      className={styles.btnSecondary}
+                      style={{ borderColor: "#ef4444", color: "#ef4444", padding: "6px 12px", fontSize: "13px", cursor: "pointer" }}
+                    >
+                      Delete Selected ({selectedCheckouts.size})
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -3280,10 +3569,12 @@ function AdminPageContent() {
                     <div key={co.sessionId} className={styles.inventoryFullCard} style={{ padding: "16px 20px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <input type="checkbox" checked={selectedCheckouts.has(co.sessionId)} onChange={() => toggleCheckoutSelect(co.sessionId)} />
                           <div>
-                            <strong style={{ fontSize: "14px" }}>{co.name || "Guest"}</strong>
+                            <strong style={{ fontSize: "14px" }}>{co.name || co.formData?.billingName || "Guest"}</strong>
                             <span style={{ fontSize: "11px", color: "var(--text-muted)", marginLeft: "8px" }}>
-                              {co.email && <span>&#9993; {co.email}</span>}{co.phone && <span> &#128241; {co.phone}</span>}
+                              {(co.email || co.formData?.billingEmail) && <span>&#9993; {co.email || co.formData?.billingEmail}</span>}
+                              {(co.phone || co.formData?.billingPhone) && <span> &#128241; {co.phone || co.formData?.billingPhone}</span>}
                             </span>
                           </div>
                         </div>
@@ -3292,6 +3583,7 @@ function AdminPageContent() {
                           <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                             {new Date(co.createdAt).toLocaleDateString("en-IN")}
                           </span>
+                          {co.archived && <span style={{ fontSize: "10px", color: "#6b7280", background: "#f3f4f6", padding: "2px 6px", borderRadius: "4px" }}>Archived</span>}
                         </div>
                       </div>
 
@@ -3302,6 +3594,11 @@ function AdminPageContent() {
                             &#127758; {co.lat.toFixed(4)}, {co.lng.toFixed(4)}
                           </span>
                         )}
+                        {co.ipLocation && (
+                          <span style={{ marginLeft: "12px" }}>
+                            📍 {co.ipLocation}
+                          </span>
+                        )}
                       </div>
 
                       <div style={{ marginTop: "8px" }}>
@@ -3309,57 +3606,207 @@ function AdminPageContent() {
                           onClick={() => setExpandedCheckoutId(expandedCheckoutId === co.sessionId ? null : co.sessionId)}
                           style={{ background: "none", border: "none", color: "#008060", cursor: "pointer", fontSize: "12px", fontWeight: 600, padding: "4px 0" }}
                         >
-                          {expandedCheckoutId === co.sessionId ? "&#9650; Hide Details" : "&#9660; Show Details"}
+                          {expandedCheckoutId === co.sessionId ? "▲ Hide Details" : "▼ Show Details"}
                         </button>
                       </div>
 
-                      {expandedCheckoutId === co.sessionId && co.items && (
+                      {expandedCheckoutId === co.sessionId && (
                         <div style={{ marginTop: "10px", borderTop: "1px solid #f0f0f0", paddingTop: "12px" }}>
-                          <table style={{ width: "100%", fontSize: "12px", borderCollapse: "collapse" }}>
-                            <thead>
-                              <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                                <th style={{ textAlign: "left", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Product</th>
-                                <th style={{ textAlign: "right", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Qty</th>
-                                <th style={{ textAlign: "right", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Price</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {co.items.map((item: any, idx: number) => (
-                                <tr key={idx} style={{ borderBottom: "1px solid #f9fafb" }}>
-                                  <td style={{ padding: "6px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                                    {item.image && <img src={item.image} alt="" style={{ width: "28px", height: "28px", borderRadius: "4px", objectFit: "cover" }} />}
-                                    <span>{item.name}</span>
-                                  </td>
-                                  <td style={{ textAlign: "right", padding: "6px 8px" }}>{item.quantity}</td>
-                                  <td style={{ textAlign: "right", padding: "6px 8px", fontWeight: 600 }}>&#8377;{(item.price * item.quantity).toLocaleString("en-IN")}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                          {/* Form Data Section */}
+                          {co.formData && (
+                            <div style={{ marginBottom: "12px", padding: "10px", background: "#f9fafb", borderRadius: "6px", fontSize: "12px" }}>
+                              <strong style={{ fontSize: "13px", display: "block", marginBottom: "8px" }}>Billing Details</strong>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
+                                <div><span style={{ color: "#6b7280" }}>Name:</span> {co.formData.billingName}</div>
+                                <div><span style={{ color: "#6b7280" }}>Email:</span> {co.formData.billingEmail}</div>
+                                <div><span style={{ color: "#6b7280" }}>Phone:</span> {co.formData.billingPhone}</div>
+                                <div><span style={{ color: "#6b7280" }}>Pincode:</span> {co.formData.billingPincode}</div>
+                                <div style={{ gridColumn: "1 / -1" }}><span style={{ color: "#6b7280" }}>Address:</span> {co.formData.billingAddressLine1}{co.formData.billingAddressLine2 ? `, ${co.formData.billingAddressLine2}` : ""}{co.formData.billingLandmark ? ` (${co.formData.billingLandmark})` : ""}</div>
+                                <div style={{ gridColumn: "1 / -1" }}><span style={{ color: "#6b7280" }}>State / District:</span> {co.formData.billingState} / {co.formData.billingCity}</div>
+                              </div>
+                              {co.formData.sameAsBilling === false && (
+                                <>
+                                  <strong style={{ fontSize: "13px", display: "block", margin: "10px 0 8px" }}>Shipping Details</strong>
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
+                                    <div><span style={{ color: "#6b7280" }}>Name:</span> {co.formData.shippingName}</div>
+                                    <div style={{ gridColumn: "1 / -1" }}><span style={{ color: "#6b7280" }}>Address:</span> {co.formData.shippingAddressLine1}{co.formData.shippingAddressLine2 ? `, ${co.formData.shippingAddressLine2}` : ""}{co.formData.shippingLandmark ? ` (${co.formData.shippingLandmark})` : ""}</div>
+                                    <div style={{ gridColumn: "1 / -1" }}><span style={{ color: "#6b7280" }}>State / District:</span> {co.formData.shippingState} / {co.formData.shippingCity}</div>
+                                    <div><span style={{ color: "#6b7280" }}>Pincode:</span> {co.formData.shippingPincode}</div>
+                                  </div>
+                                </>
+                              )}
+                              {(co.formData.giftWrap || co.formData.giftNote) && (
+                                <>
+                                  <strong style={{ fontSize: "13px", display: "block", margin: "10px 0 8px" }}>Gift Options</strong>
+                                  {co.formData.giftWrap && <div><span style={{ color: "#6b7280" }}>Gift Wrap:</span> Yes</div>}
+                                  {co.formData.giftNote && <div><span style={{ color: "#6b7280" }}>Gift Note:</span> {co.formData.giftNote}</div>}
+                                </>
+                              )}
+                            </div>
+                          )}
 
+                          {/* Items Table */}
+                          {co.items && (
+                            <table style={{ width: "100%", fontSize: "12px", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Product</th>
+                                  <th style={{ textAlign: "right", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Qty</th>
+                                  <th style={{ textAlign: "right", padding: "4px 8px", color: "#6b7280", fontWeight: 500 }}>Price</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {co.items.map((item: any, idx: number) => (
+                                  <tr key={idx} style={{ borderBottom: "1px solid #f9fafb" }}>
+                                    <td style={{ padding: "6px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                      {item.image && <img src={item.image} alt="" style={{ width: "28px", height: "28px", borderRadius: "4px", objectFit: "cover" }} />}
+                                      <span>{item.name}</span>
+                                    </td>
+                                    <td style={{ textAlign: "right", padding: "6px 8px" }}>{item.quantity}</td>
+                                    <td style={{ textAlign: "right", padding: "6px 8px", fontWeight: 600 }}>&#8377;{(item.price * item.quantity).toLocaleString("en-IN")}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+
+                          {/* Map Embed */}
                           {co.lat && co.lng && (
-                            <div style={{ marginTop: "12px", fontSize: "12px", color: "var(--text-muted)", padding: "8px 0" }}>
-                              <strong>Location:</strong> {co.lat.toFixed(6)}, {co.lng.toFixed(6)}
-                              <span style={{ marginLeft: "12px" }}>
+                            <div style={{ marginTop: "12px" }}>
+                              <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "6px" }}>
+                                <strong>Location:</strong> {co.lat.toFixed(6)}, {co.lng.toFixed(6)}
+                              </div>
+                              <div style={{ borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb" }}>
+                                <iframe
+                                  width="100%"
+                                  height="200"
+                                  style={{ border: 0, display: "block" }}
+                                  loading="lazy"
+                                  allowFullScreen
+                                  referrerPolicy="no-referrer-when-downgrade"
+                                  src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${co.lat},${co.lng}&zoom=15`}
+                                />
+                              </div>
+                              <div style={{ marginTop: "4px" }}>
                                 <a
                                   href={`https://www.google.com/maps?q=${co.lat},${co.lng}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  style={{ color: "#008060", textDecoration: "underline" }}
+                                  style={{ color: "#008060", fontSize: "11px", textDecoration: "underline" }}
                                 >
-                                  View on Maps
+                                  Open in Google Maps &rarr;
                                 </a>
-                              </span>
+                              </div>
                             </div>
                           )}
+
+                          {renderSessionTimeline(co.sessionId)}
                         </div>
                       )}
 
+                      {/* Action Buttons */}
                       <div style={{ marginTop: "12px", borderTop: "1px solid #f0f0f0", paddingTop: "10px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
                         <button
                           onClick={() => {
-                            if (window.confirm("Delete this abandoned checkout record?")) deleteAbandonedCheckout(co.sessionId);
+                            const link = `${window.location.origin}/checkout/${co.sessionId}`;
+                            navigator.clipboard.writeText(link);
+                            addCheckoutLogEntry(co.sessionId, "link", `Checkout link copied: ${link}`);
                           }}
+                          className={styles.btnSecondary}
+                          style={{ padding: "4px 10px", fontSize: "11px" }}
+                        >
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: "4px" }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                          Copy Link
+                        </button>
+
+                        {(co.email || co.formData?.billingEmail) && (
+                          <button
+                            onClick={() => {
+                              const emailAddr = co.email || co.formData?.billingEmail;
+                              const subject = encodeURIComponent("Complete Your Purchase - Items Waiting");
+                              const body = encodeURIComponent(`Hi ${co.name || co.formData?.billingName || "there"},\n\nYou left items worth ₹${co.total?.toLocaleString("en-IN") || 0}. Complete your purchase now!\n\n${window.location.origin}/checkout/${co.sessionId}`);
+                              window.open(`mailto:${emailAddr}?subject=${subject}&body=${body}`);
+                              addCheckoutLogEntry(co.sessionId, "email", `Follow-up email sent to ${emailAddr}`);
+                            }}
+                            className={styles.btnSecondary}
+                            style={{ padding: "4px 10px", fontSize: "11px" }}
+                          >
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: "4px" }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            Send Email
+                          </button>
+                        )}
+
+                        {(co.phone || co.formData?.billingPhone) && (
+                          <button
+                            onClick={() => {
+                              const phone = co.phone || co.formData?.billingPhone;
+                              const msg = encodeURIComponent(`Hi ${co.name || co.formData?.billingName || "there"}! You left items worth ₹${co.total?.toLocaleString("en-IN") || 0} in your cart. Complete your purchase: ${window.location.origin}/checkout/${co.sessionId}`);
+                              window.open(`https://wa.me/${phone.replace(/[^0-9]/g, "")}?text=${msg}`);
+                              addCheckoutLogEntry(co.sessionId, "whatsapp", `WhatsApp message sent to ${phone}`);
+                            }}
+                            className={styles.btnSecondary}
+                            style={{ padding: "4px 10px", fontSize: "11px" }}
+                          >
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style={{ verticalAlign: "middle", marginRight: "4px" }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            Send WhatsApp
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => setCheckoutLogsId(checkoutLogsId === co.sessionId ? null : co.sessionId)}
+                          className={styles.btnSecondary}
+                          style={{ padding: "4px 10px", fontSize: "11px" }}
+                        >
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: "4px" }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                          {checkoutLogsId === co.sessionId ? "Hide Logs" : "Show Logs"}
+                        </button>
+
+                        {checkoutLogsId === co.sessionId && (
+                          <div style={{ width: "100%", marginTop: "8px", padding: "10px", background: "#f9fafb", borderRadius: "6px" }}>
+                            <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>Follow-up Logs</div>
+                            {(!co.followUpLogs || co.followUpLogs.length === 0) && (
+                              <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "0 0 8px 0" }}>No follow-up actions recorded yet.</p>
+                            )}
+                            {co.followUpLogs?.map((log: any, idx: number) => (
+                              <div key={idx} style={{ fontSize: "11px", padding: "4px 0", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between" }}>
+                                <span><strong>{log.type.toUpperCase()}:</strong> {log.message}</span>
+                                <span style={{ color: "var(--text-muted)" }}>{new Date(log.sentAt).toLocaleString("en-IN")}</span>
+                              </div>
+                            ))}
+                            <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
+                              <input
+                                type="text"
+                                placeholder="Add a note..."
+                                value={checkoutLogInput}
+                                onChange={(e) => setCheckoutLogInput(e.target.value)}
+                                style={{ flex: 1, padding: "6px 10px", border: "1px solid #e1e3e5", borderRadius: "4px", fontSize: "11px" }}
+                              />
+                              <button
+                                onClick={() => {
+                                  if (!checkoutLogInput.trim()) return;
+                                  addCheckoutLogEntry(co.sessionId, "note", checkoutLogInput.trim());
+                                  setCheckoutLogInput("");
+                                }}
+                                className={styles.btnPrimary}
+                                style={{ padding: "6px 12px", fontSize: "11px" }}
+                              >
+                                Add Note
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => updateCheckout(co.sessionId, { archived: !co.archived })}
+                          className={styles.btnSecondary}
+                          style={{ padding: "4px 10px", fontSize: "11px" }}
+                        >
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: "4px" }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          {co.archived ? "Unarchive" : "Archive"}
+                        </button>
+
+                        <button
+                          onClick={() => { if (window.confirm("Delete this abandoned checkout record?")) deleteAbandonedCheckout(co.sessionId); }}
                           style={{ background: "none", border: "1px solid #ef4444", borderRadius: "4px", padding: "4px 10px", fontSize: "11px", cursor: "pointer", color: "#ef4444", fontWeight: 500 }}
                         >
                           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: "4px" }}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -3368,6 +3815,47 @@ function AdminPageContent() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Map Modal */}
+              {showMapModal && mapData && (
+                <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
+                  onClick={() => { setShowMapModal(false); setMapData(null); }}
+                >
+                  <div style={{ background: "#fff", borderRadius: "12px", width: "100%", maxWidth: "600px", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h3 style={{ margin: 0, fontSize: "16px" }}>{mapData.name} - Location</h3>
+                      <button onClick={() => { setShowMapModal(false); setMapData(null); }}
+                        style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#6b7280", padding: "0 4px" }}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                    <div style={{ height: "400px" }}>
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        loading="lazy"
+                        allowFullScreen
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${mapData.lat},${mapData.lng}&zoom=16`}
+                      />
+                    </div>
+                    <div style={{ padding: "12px 20px", fontSize: "12px", color: "var(--text-muted)", textAlign: "center" }}>
+                      <a
+                        href={`https://www.google.com/maps?q=${mapData.lat},${mapData.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#008060", textDecoration: "underline" }}
+                      >
+                        Open in Google Maps &rarr;
+                      </a>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

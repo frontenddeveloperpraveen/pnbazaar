@@ -161,6 +161,28 @@ function OrdersContent() {
                             <p className={styles.detailAddr}>Yes {order.customerInfo.giftNote ? `- "${order.customerInfo.giftNote}"` : ""}</p>
                           </div>
                         )}
+                        <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #f0f0f0" }}>
+                          <span className={styles.detailLabel} style={{ color: "#008060", fontWeight: 700 }}>Estimated Delivery</span>
+                          <p className={styles.detailAddr} style={{ fontWeight: 600, color: "#111827" }}>
+                            {(() => {
+                              const today = new Date();
+                              let daysToAdd = 5;
+                              const targetDate = new Date(today);
+                              targetDate.setDate(today.getDate() + 5);
+                              if (targetDate.getDay() === 0) {
+                                daysToAdd = 6;
+                              }
+                              const finalDate = new Date(today);
+                              finalDate.setDate(today.getDate() + daysToAdd);
+                              return finalDate.toLocaleDateString("en-US", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric"
+                              });
+                            })()}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

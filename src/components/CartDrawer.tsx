@@ -30,6 +30,7 @@ export const CartDrawer: React.FC = () => {
   const [promoError, setPromoError] = useState("");
   const [promoSuccess, setPromoSuccess] = useState(false);
   const [showOffers, setShowOffers] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Close drawer on escape key
   useEffect(() => {
@@ -340,13 +341,27 @@ export const CartDrawer: React.FC = () => {
               </Link>
               <button
                 className={styles.checkoutBtn}
+                disabled={isCheckingOut}
                 onClick={() => {
-                  setCartDrawerOpen(false);
-                  const sessionId = createCheckoutSession();
-                  if (sessionId) router.push(`/checkout/${sessionId}`);
+                  setIsCheckingOut(true);
+                  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+                  if (!isMobile) {
+                    setCartDrawerOpen(false);
+                  }
+                  setTimeout(() => {
+                    const sessionId = createCheckoutSession();
+                    if (sessionId) {
+                      router.push(`/checkout/${sessionId}`);
+                    }
+                    setIsCheckingOut(false);
+                  }, 600);
                 }}
               >
-                Checkout
+                {isCheckingOut ? (
+                  <span className={styles.loadingSpinner}></span>
+                ) : (
+                  "Checkout"
+                )}
               </button>
             </div>
           </div>

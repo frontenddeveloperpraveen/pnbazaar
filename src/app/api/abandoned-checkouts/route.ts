@@ -30,11 +30,36 @@ export async function POST(request: Request) {
       total: body.total || 0,
       lat: body.lat || null,
       lng: body.lng || null,
+      ipLocation: body.ipLocation || null,
+      archived: false,
+      followUpLogs: [],
+      formData: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     const result = await collection.insertOne(doc);
     return NextResponse.json({ ...doc, _id: result.insertedId.toString() }, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const db = await getDatabase();
+    const collection = db.collection("abandoned_checkouts");
+    const body = await request.json();
+    const { sessionId, ...updates } = body;
+    if (!sessionId) return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+    updates.updatedAt = new Date().toISOString();
+    const result = await collection.findOneAndUpdate(
+      { sessionId },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { _id, ...rest } = result;
+    return NextResponse.json({ ...rest, _id: _id.toString() });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

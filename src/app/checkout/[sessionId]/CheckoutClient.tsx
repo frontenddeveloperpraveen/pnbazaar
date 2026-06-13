@@ -44,7 +44,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
   const [session, setSession] = useState<CheckoutSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE" | "">("");
   const [step, setStep] = useState<"address" | "payment">("address");
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
@@ -65,6 +65,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
   // Geolocation
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
+  const [ipLocation, setIpLocation] = useState<string>("");
 
   // Shipping
   const [sameAsBilling, setSameAsBilling] = useState(true);
@@ -196,15 +197,35 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
   }, [sessionId, router, setCartDrawerOpen]);
 
   useEffect(() => {
+    const fetchIpLocation = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.latitude && data.longitude) {
+            setLat(data.latitude);
+            setLng(data.longitude);
+            setIpLocation(`${data.city || ""}, ${data.region || ""}, ${data.country_name || ""} (IP: ${data.ip || ""})`);
+          }
+        }
+      } catch (err) {
+        console.error("IP Geolocation failed:", err);
+      }
+    };
+
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setLat(pos.coords.latitude);
           setLng(pos.coords.longitude);
         },
-        () => {},
+        () => {
+          fetchIpLocation();
+        },
         { enableHighAccuracy: true, timeout: 10000 },
       );
+    } else {
+      fetchIpLocation();
     }
   }, []);
 
@@ -229,9 +250,86 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
         total: session.subtotal - session.totalDiscount + session.shippingFee,
         lat,
         lng,
+        ipLocation,
       }),
     }).catch(() => {});
-  }, [session, sessionId, lat, lng]);
+  }, [session, sessionId, lat, lng, ipLocation]);
+
+  useEffect(() => {
+    if (!session) return;
+    const timer = setTimeout(() => {
+      fetch("/api/abandoned-checkouts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          name: billingName,
+          email: billingEmail,
+          phone: billingPhone,
+          formData: {
+            billingName,
+            billingEmail,
+            billingPhone,
+            billingAddressLine1,
+            billingAddressLine2,
+            billingLandmark,
+            billingState,
+            billingCity,
+            billingPincode,
+            shippingName,
+            shippingAddressLine1,
+            shippingAddressLine2,
+            shippingLandmark,
+            shippingState,
+            shippingCity,
+            shippingPincode,
+            sameAsBilling,
+            giftWrap,
+            giftNote,
+          },
+        }),
+      }).catch(() => {});
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [
+    session,
+    sessionId,
+    billingName,
+    billingEmail,
+    billingPhone,
+    billingAddressLine1,
+    billingAddressLine2,
+    billingLandmark,
+    billingState,
+    billingCity,
+    billingPincode,
+    shippingName,
+    shippingAddressLine1,
+    shippingAddressLine2,
+    shippingLandmark,
+    shippingState,
+    shippingCity,
+    shippingPincode,
+    sameAsBilling,
+    giftWrap,
+    giftNote,
+  ]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (lat !== null || lng !== null || ipLocation) {
+      fetch("/api/abandoned-checkouts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          lat,
+          lng,
+          ipLocation,
+        }),
+      }).catch(() => {});
+    }
+  }, [lat, lng, ipLocation, session, sessionId]);
 
   const loadAddresses = (): SavedAddress[] => {
     try {
@@ -284,6 +382,46 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
     return Object.keys(errs).length === 0;
   };
 
+  const updateAbandonedCheckoutForm = async () => {
+    try {
+      await fetch("/api/abandoned-checkouts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          name: billingName,
+          email: billingEmail,
+          phone: billingPhone,
+          formData: {
+            billingName,
+            billingEmail,
+            billingPhone,
+            billingAddressLine1,
+            billingAddressLine2,
+            billingLandmark,
+            billingState,
+            billingCity,
+            billingPincode,
+            shippingName,
+            shippingAddressLine1,
+            shippingAddressLine2,
+            shippingLandmark,
+            shippingState,
+            shippingCity,
+            shippingPincode,
+            sameAsBilling,
+            giftWrap,
+            giftNote,
+          },
+          lat,
+          lng,
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to update abandoned checkout", e);
+    }
+  };
+
   const handleSaveAddress = () => {
     if (!validateAddress()) return;
     const newAddr: SavedAddress = {
@@ -310,6 +448,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
     setSelectedAddressId(newAddr.id);
     setShowAddressForm(false);
     setEditingAddressId(null);
+    updateAbandonedCheckoutForm();
     setStep("payment");
   };
 
@@ -327,6 +466,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
       setBillingCity(addr.city);
       setBillingPincode(addr.pincode);
     }
+    updateAbandonedCheckoutForm();
   };
 
   const handleEditAddress = (addr: SavedAddress) => {
@@ -401,9 +541,18 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
       if (!shippingCity) errs.shippingCity = "City is required";
       if (!shippingPincode.trim()) errs.shippingPincode = "Pincode is required";
     }
+    if (!paymentMethod) {
+      errs.paymentMethod = "Please select a payment method";
+    }
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
       setErrors(prev => ({ ...prev, form: "Please fix the highlighted fields and try again." }));
+      setTimeout(() => {
+        const pEl = document.getElementById("payment-section-container");
+        if (pEl) {
+          pEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
       return;
     }
 
@@ -463,18 +612,19 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
         return;
       }
 
+      const dbOrderId = checkoutData.order.id;
+
       if (paymentMethod === "COD") {
         try {
           clearCart();
           localStorage.removeItem("checkout_" + sessionId);
           await fetch("/api/abandoned-checkouts?sessionId=" + encodeURIComponent(sessionId), { method: "DELETE" });
         } catch {}
-        router.push("/orders?success=true");
+        router.push(`/payment/success?orderId=${dbOrderId}`);
         return;
       }
 
       const rzpOrderId = checkoutData.razorpay.orderId;
-      const dbOrderId = checkoutData.order.id;
 
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_pnbazaarKey123",
@@ -502,14 +652,16 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
               clearCart();
               localStorage.removeItem("checkout_" + sessionId);
               await fetch("/api/abandoned-checkouts?sessionId=" + encodeURIComponent(sessionId), { method: "DELETE" });
-              router.push("/orders?success=true");
+              router.push(`/payment/success?orderId=${dbOrderId}`);
             } else {
               setErrors({ form: verifyData.error || "Payment verification failed. Please contact PN Bazaar support." });
               setSubmitting(false);
+              router.push(`/payment/failure?orderId=${dbOrderId}`);
             }
           } catch (err: any) {
             setErrors({ form: "An error occurred while validating payment." });
             setSubmitting(false);
+            router.push(`/payment/failure?orderId=${dbOrderId}`);
           }
         },
         prefill: {
@@ -520,9 +672,12 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
         notes: { address: billingFull, sessionId },
         theme: { color: "#121212" },
         modal: {
-          ondismiss: async function () {
+          ondismiss: function () {
+            // Instantly transition UI to failure without blocking/waiting
             setSubmitting(false);
-            await fetch("/api/razorpay/cancel", {
+            router.push(`/payment/failure?orderId=${dbOrderId}&cancelled=true`);
+            // Fire cancel request asynchronously
+            fetch("/api/razorpay/cancel", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ orderId: dbOrderId, reason: "Payment modal closed by customer" }),
@@ -925,21 +1080,31 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
       )}
     </div>
   );
-
   const sharedPaymentMethodSection = (
-    <div className={styles.sectionCard}>
+    <div className={styles.sectionCard} id="payment-section-container" style={{ border: errors.paymentMethod ? "2px solid #ef4444" : "1px solid var(--border-color)", transition: "all 0.2s" }}>
       <h2 className={styles.sectionTitle}>Payment Method</h2>
+      {errors.paymentMethod && (
+        <p style={{ color: "#ef4444", fontSize: "13px", fontWeight: 600, marginBottom: "12px" }}>
+          ⚠️ {errors.paymentMethod}
+        </p>
+      )}
 
       <div
         className={styles.paymentOption}
+        onClick={() => setPaymentMethod("COD")}
         style={{
           borderColor:
             paymentMethod === "COD" ? "var(--primary)" : "var(--border-color)",
-          borderWidth: paymentMethod === "COD" ? "2px" : "1px",
+          borderWidth: paymentMethod === "COD" ? "1.5px" : "1px",
           borderStyle: "solid",
           boxShadow: paymentMethod === "COD" ? "var(--shadow-sm)" : "none",
           padding: "16px",
           borderRadius: "var(--radius-md)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          outline: "none",
+          WebkitTapHighlightColor: "transparent",
         }}
       >
         <input
@@ -948,9 +1113,10 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
           id="cod"
           checked={paymentMethod === "COD"}
           onChange={() => setPaymentMethod("COD")}
+          style={{ outline: "none", WebkitTapHighlightColor: "transparent" }}
         />
         <div style={{ marginLeft: "8px" }}>
-          <label htmlFor="cod" className={styles.paymentLabel}>
+          <label htmlFor="cod" className={styles.paymentLabel} style={{ cursor: "pointer", display: "flex", alignItems: "center", WebkitTapHighlightColor: "transparent" }}>
             <svg
               viewBox="0 0 24 24"
               width="18"
@@ -960,7 +1126,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ marginRight: "6px", verticalAlign: "middle" }}
+              style={{ marginRight: "6px" }}
             >
               <rect x="2" y="4" width="20" height="16" rx="2" />
               <line x1="12" y1="12" x2="12" y2="12.01" />
@@ -976,17 +1142,23 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
 
       <div
         className={styles.paymentOption}
+        onClick={() => setPaymentMethod("ONLINE")}
         style={{
           marginTop: "16px",
           borderColor:
             paymentMethod === "ONLINE"
               ? "var(--primary)"
               : "var(--border-color)",
-          borderWidth: paymentMethod === "ONLINE" ? "2px" : "1px",
+          borderWidth: paymentMethod === "ONLINE" ? "1.5px" : "1px",
           borderStyle: "solid",
           boxShadow: paymentMethod === "ONLINE" ? "var(--shadow-sm)" : "none",
           padding: "16px",
           borderRadius: "var(--radius-md)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          outline: "none",
+          WebkitTapHighlightColor: "transparent",
         }}
       >
         <input
@@ -995,9 +1167,10 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
           id="online"
           checked={paymentMethod === "ONLINE"}
           onChange={() => setPaymentMethod("ONLINE")}
+          style={{ outline: "none", WebkitTapHighlightColor: "transparent" }}
         />
         <div style={{ marginLeft: "8px", width: "100%" }}>
-          <label htmlFor="online" className={styles.paymentLabel}>
+          <label htmlFor="online" className={styles.paymentLabel} style={{ cursor: "pointer", display: "flex", alignItems: "center", WebkitTapHighlightColor: "transparent" }}>
             <svg
               viewBox="0 0 24 24"
               width="18"
@@ -1007,102 +1180,46 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ marginRight: "6px", verticalAlign: "middle" }}
+              style={{ marginRight: "6px" }}
             >
               <rect x="1" y="4" width="22" height="16" rx="2" />
               <path d="M1 10h22" />
               <path d="M5 15h2" />
             </svg>
-            Online Payment (UPI, Credit/Debit Card)
+            Online Payment (UPI, Cards, NetBanking)
           </label>
           <p className={styles.paymentDesc} style={{ marginBottom: "8px" }}>
-            Pay securely with Cards, UPI, or NetBanking using Razorpay
+            Pay securely with Credit/Debit cards, NetBanking, or UPI
           </p>
           <div
             style={{
               display: "flex",
-              gap: "6px",
+              gap: "8px",
+              alignItems: "center",
+              marginTop: "12px",
               flexWrap: "wrap",
-              marginTop: "8px",
             }}
           >
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: "bold",
-                border: "1px solid var(--border-color)",
-                padding: "2px 6px",
-                borderRadius: "4px",
-                backgroundColor: "var(--primary-light)",
-                color: "#111",
-              }}
-            >
+            {/* Payment Gateway icons (Visa, Mastercard, RuPay, UPI SVGs) */}
+            <div style={{ display: "flex", gap: "6px" }}>
+              <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ border: "1px solid #e5e7eb", borderRadius: "3px" }}>
+                <rect width="32" height="20" rx="3" fill="#1A1F71"/>
+                <path d="M12.3 6.1l-1.8 7.8h-1.5l1.8-7.8h1.5zm6.5 0c-.3-.9-1.2-1.2-2.3-1.2h-3.1l-.3 1.3h1.2c.7 0 1.2.2 1.4.5.2.3.1.8-.1 1.4l-.8 3.8h-1.5l.8-3.8c.2-.9-.1-1.3-.8-1.3h-1.2l-.8 3.8h-1.5l1.8-7.8h1.5l-.5 2.2c.4-.7 1.1-.9 1.9-.9.8 0 1.5.3 1.8.8.4.5.3 1.2.1 2.1l-.8 3.8h-1.5l.8-3.8c.2-.9-.1-1.3-.8-1.3h-.2l-.6 2.9" fill="white"/>
+              </svg>
+              <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ border: "1px solid #e5e7eb", borderRadius: "3px" }}>
+                <rect width="32" height="20" rx="3" fill="#222"/>
+                <circle cx="12" cy="10" r="6" fill="#EB001B" opacity="0.9"/>
+                <circle cx="20" cy="10" r="6" fill="#F79E1B" opacity="0.9"/>
+              </svg>
+            </div>
+            <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #007a87", padding: "1px 5px", borderRadius: "3px", color: "#007a87", backgroundColor: "#eefbfc", whiteSpace: "nowrap" }}>
+              BHIM UPI
+            </span>
+            <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #1a1f71", padding: "1px 5px", borderRadius: "3px", color: "#1a1f71", backgroundColor: "#f0f2fa", whiteSpace: "nowrap" }}>
               CARDS
             </span>
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: "bold",
-                border: "1px solid var(--border-color)",
-                padding: "2px 6px",
-                borderRadius: "4px",
-                backgroundColor: "var(--primary-light)",
-                color: "#007a87",
-              }}
-            >
-              UPI
-            </span>
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: "bold",
-                border: "1px solid var(--border-color)",
-                padding: "2px 6px",
-                borderRadius: "4px",
-                backgroundColor: "var(--primary-light)",
-                color: "#4285F4",
-              }}
-            >
-              GPay
-            </span>
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: "bold",
-                border: "1px solid var(--border-color)",
-                padding: "2px 6px",
-                borderRadius: "4px",
-                backgroundColor: "var(--primary-light)",
-                color: "#5f259f",
-              }}
-            >
-              PhonePe
-            </span>
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: "bold",
-                border: "1px solid var(--border-color)",
-                padding: "2px 6px",
-                borderRadius: "4px",
-                backgroundColor: "var(--primary-light)",
-                color: "#00b9f5",
-              }}
-            >
-              Paytm
-            </span>
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: "bold",
-                border: "1px solid var(--border-color)",
-                padding: "2px 6px",
-                borderRadius: "4px",
-                backgroundColor: "var(--primary-light)",
-                color: "#e36c09",
-              }}
-            >
-              BHIM
+            <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #5f259f", padding: "1px 5px", borderRadius: "3px", color: "#5f259f", backgroundColor: "#f8f3fc", whiteSpace: "nowrap" }}>
+              NETBANKING
             </span>
           </div>
           <p
@@ -1430,15 +1547,17 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
                 </div>
               )}
 
-              <div className={styles.summaryRow}>
-                <span>Subtotal After Discount</span>
-                <span>
-                  ₹
-                  {(session.subtotal - session.totalDiscount - onlineDiscount).toLocaleString(
-                    "en-IN",
-                  )}
-                </span>
-              </div>
+              {(session.totalDiscount > 0 || onlineDiscount > 0) && (
+                <div className={styles.summaryRow}>
+                  <span>Subtotal After Discount</span>
+                  <span>
+                    ₹
+                    {(session.subtotal - session.totalDiscount - onlineDiscount).toLocaleString(
+                      "en-IN",
+                    )}
+                  </span>
+                </div>
+              )}
 
               <div className={styles.summaryRow}>
                 <span>Shipping</span>

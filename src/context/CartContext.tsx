@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '../data/db';
-import { trackEvent } from '../lib/tracker';
+import { trackEvent, getSessionId } from '../lib/tracker';
 
 export interface CartItem {
   product: Product;
@@ -14,7 +14,7 @@ export interface Order {
   date: string;
   items: CartItem[];
   total: number;
-  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'OnHold' | 'Return' | 'Cancelled' | 'Archived';
+  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Return' | 'Cancelled' | 'Archived';
   customerInfo: {
     name: string;
     email: string;
@@ -27,6 +27,7 @@ export interface Order {
   appliedCoupon?: string;
   emailSent?: boolean;
   defaultOrdered?: boolean;
+  archived?: boolean;
 }
 
 export interface PromoCode {
@@ -79,6 +80,8 @@ interface CartContextType {
     [key: string]: any;
   }) => Promise<Order | null>;
   updateOrderStatus: (orderId: string, status: Order['status'], trackingData?: { trackingLink?: string; courierService?: string }) => Promise<void>;
+  archiveOrder: (orderId: string, archived: boolean) => Promise<void>;
+  deleteOrder: (orderId: string) => Promise<void>;
   refreshOrders: () => Promise<void>;
   saveAbandonedCart: (email?: string, phone?: string, name?: string) => Promise<void>;
   fetchAbandonedCarts: () => Promise<any[]>;
@@ -100,6 +103,43 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [discountAmount, setDiscountAmount] = useState(0);
   const [activeCoupon, setActiveCoupon] = useState<PromoCode | null>(null);
   const [couponMessage, setCouponMessage] = useState("");
+
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [ipLocation, setIpLocation] = useState<string>("");
+
+  useEffect(() => {
+    const fetchIpLocation = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.latitude && data.longitude) {
+            setLat(data.latitude);
+            setLng(data.longitude);
+            setIpLocation(`${data.city || ""}, ${data.region || ""}, ${data.country_name || ""} (IP: ${data.ip || ""})`);
+          }
+        }
+      } catch (err) {
+        console.error("IP Geolocation failed:", err);
+      }
+    };
+
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLat(pos.coords.latitude);
+          setLng(pos.coords.longitude);
+        },
+        () => {
+          fetchIpLocation();
+        },
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    } else {
+      fetchIpLocation();
+    }
+  }, []);
 
   // Load from localStorage on mount & fetch from MongoDB API
   useEffect(() => {
@@ -468,6 +508,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const archiveOrder = async (orderId: string, archived: boolean) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived })
+      });
+      if (res.ok) {
+        setOrders(prev => prev.map(order => 
+          order.id === orderId ? { ...order, archived } : order
+        ));
+      }
+    } catch (err) {
+      console.error("Failed to archive/unarchive order:", err);
+    }
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        setOrders(prev => prev.filter(order => order.id !== orderId));
+      }
+    } catch (err) {
+      console.error("Failed to delete order:", err);
+    }
+  };
+
   const refreshOrders = async () => {
     try {
       const res = await fetch("/api/orders");
@@ -492,7 +562,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetch("/api/abandoned-carts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, phone, name, items, total: getCartTotal() })
+        body: JSON.stringify({
+          email,
+          phone,
+          name,
+          items,
+          total: getCartTotal(),
+          sessionId: getSessionId(),
+          lat,
+          lng,
+          ipLocation
+        })
       });
     } catch (err) {
       console.error(err);
@@ -566,6 +646,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getFinalTotal,
       checkout,
       updateOrderStatus,
+      archiveOrder,
+      deleteOrder,
       refreshOrders,
       saveAbandonedCart,
       fetchAbandonedCarts,

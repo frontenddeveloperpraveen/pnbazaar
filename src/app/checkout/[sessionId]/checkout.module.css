@@ -168,9 +168,9 @@
 .summaryCard {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 16px 20px;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-md);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -178,12 +178,14 @@
 }
 
 .summaryTitle {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
 }
 
 .summaryItems {
@@ -194,16 +196,16 @@
 
 .summaryItem {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-color);
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border-color);
 }
 
 .summaryItemImg {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-sm);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
   object-fit: cover;
   border: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -212,39 +214,46 @@
 .summaryItemInfo {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .summaryItemName {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
+  color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .summaryItemQty {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .summaryItemPrice {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  color: var(--text-main);
   white-space: nowrap;
+  display: flex;
+  align-items: center;
 }
 
 .summaryFooter {
   flex-shrink: 0;
-  padding-top: 8px;
+  padding-top: 12px;
 }
 
 .summaryRow {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .discountRow {
@@ -255,28 +264,28 @@
 .divider {
   height: 1px;
   background-color: var(--border-color);
-  margin: 8px 0;
+  margin: 12px 0;
 }
 
 .totalBox {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f3fdf6;
-  border: 1px solid #c8f0d4;
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  margin: 8px 0 0;
-  font-size: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin: 12px 0 0;
+  font-size: 15px;
   font-weight: 700;
-  color: #0c6b3d;
+  color: var(--text-main);
 }
 
 .grandTotal {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
-  color: #0c6b3d;
+  color: var(--primary);
 }
 
 .placeOrderBtn {
@@ -284,9 +293,9 @@
   background-color: var(--primary);
   color: white;
   border-radius: 100px;
-  padding: 14px 16px;
-  font-weight: 600;
-  font-size: 13px;
+  padding: 18px 24px;
+  font-weight: 700;
+  font-size: 14px;
   transition: all var(--transition-fast);
   text-align: center;
   box-shadow: 0 4px 12px var(--primary-glow);
@@ -576,11 +585,15 @@
 
 @media (max-width: 1024px) {
   .container {
-    padding: 70px 12px 0;
-    height: 100vh;
-    overflow: hidden;
+    padding: 70px 12px 20px;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
   }
   .header {
     margin-bottom: 8px;
@@ -605,21 +618,23 @@
   .layout {
     grid-template-columns: 1fr;
     gap: 0;
-    flex: 1;
-    overflow: hidden;
+    flex: none;
+    overflow: visible;
     display: flex;
     flex-direction: column;
     margin-top: 0;
+    width: 100%;
   }
   .formCol {
-    overflow-y: auto;
-    min-height: 0;
-    flex: 1;
+    overflow: visible;
+    min-height: auto;
+    flex: none;
     padding-bottom: 4px;
+    width: 100%;
   }
   .summaryCol {
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
+    width: 100%;
+    margin-left: 0;
     position: relative;
     top: 0;
     height: auto;
@@ -628,7 +643,7 @@
     border-top: 1px solid var(--border-color);
     border-bottom: none;
     background: var(--bg-surface);
-    padding: 0 12px 4px;
+    padding: 12px 0;
     margin-top: 0;
   }
   .summaryCard {
@@ -665,9 +680,10 @@
     font-size: 16px;
   }
   .placeOrderBtn {
-    margin-top: 6px;
-    padding: 8px 14px;
-    font-size: 12px;
+    margin-top: 8px;
+    padding: 16px 20px;
+    font-size: 13px;
+    font-weight: 700;
     margin-bottom: 12px;
   }
 }

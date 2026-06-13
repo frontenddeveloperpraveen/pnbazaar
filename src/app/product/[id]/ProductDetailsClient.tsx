@@ -680,12 +680,14 @@ export default function ProductDetailsClient({
               <h3>Specifications</h3>
               <table className={styles.specsTable}>
                 <tbody>
-                  {Object.entries(product.specs).map(([key, value]) => (
-                    <tr key={key}>
-                      <td className={styles.specKey}>{key}</td>
-                      <td className={styles.specVal}>{value}</td>
-                    </tr>
-                  ))}
+                  {Object.entries(product.specs)
+                    .filter(([key]) => key !== "Stock Status")
+                    .map(([key, value]) => (
+                      <tr key={key}>
+                        <td className={styles.specKey}>{key}</td>
+                        <td className={styles.specVal}>{value}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

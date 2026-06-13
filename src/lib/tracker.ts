@@ -18,7 +18,7 @@ function getRandomLocation(): string {
   return "Delhi";
 }
 
-function getSessionId(): string {
+export function getSessionId(): string {
   if (typeof window !== "undefined") {
     let sessId = sessionStorage.getItem("pn_session_id");
     if (!sessId) {

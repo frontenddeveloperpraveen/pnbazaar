@@ -25,6 +25,25 @@ export default function CartClient() {
 
   const [promoInput, setPromoInput] = useState("");
   const [couponResult, setCouponResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setCartDrawerOpen(true);
+        router.replace("/");
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [router, setCartDrawerOpen]);
+
+  if (isMobile) {
+    return null;
+  }
 
   const subtotal = getCartTotal();
   const combinedPct = autoOfferDiscount + discountPercentage;
