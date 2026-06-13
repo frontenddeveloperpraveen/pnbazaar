@@ -285,6 +285,13 @@ export const CartDrawer: React.FC = () => {
                 {showOffers && (
                   <div className={styles.offersPanel}>
                     <p className={styles.offersTitle}>Available Offers</p>
+                    <div className={styles.offerItem} style={{ cursor: "default", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "10px 12px", marginBottom: "8px", flexDirection: "column", alignItems: "flex-start", gap: "4px" }}>
+                      <p style={{ margin: 0, fontSize: "12px", color: "#166534", fontWeight: 600 }}>Online Payment 10% instant discount</p>
+                      <p style={{ margin: 0, fontSize: "11px", color: "#059669", fontWeight: 500 }}>Automatically applied at checkout</p>
+                    </div>
+                    {promoCodes.filter(p => new Date(p.endDate || "") > new Date() || p.isForever).length > 0 && (
+                      <div style={{ fontSize: "11px", fontWeight: 600, color: "#6b7280", margin: "6px 0 4px" }}>Promo Codes</div>
+                    )}
                     {promoCodes.filter(p => new Date(p.endDate || "") > new Date() || p.isForever).map(p => (
                       <div key={p.code} className={styles.offerItem} onClick={() => { setPromoInput(p.code); setShowOffers(false); }}>
                         <span className={styles.offerCode}>{p.code}</span>
@@ -292,7 +299,7 @@ export const CartDrawer: React.FC = () => {
                       </div>
                     ))}
                     {promoCodes.filter(p => new Date(p.endDate || "") > new Date() || p.isForever).length === 0 && (
-                      <p className={styles.offerEmpty}>No offers available</p>
+                      <p className={styles.offerEmpty}>No promo codes available</p>
                     )}
                   </div>
                 )}

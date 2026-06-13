@@ -9,15 +9,12 @@ function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderId = searchParams.get("orderId") || "—";
+  const method = searchParams.get("method") || "ONLINE";
+  const isCOD = method === "COD";
   const { clearCart } = useCart();
   const clearedRef = React.useRef(false);
 
-  const [rating, setRating] = useState<number>(0);
-  const [hoverRating, setHoverRating] = useState<number>(0);
-  const [feedback, setFeedback] = useState<string>("");
-  const [submittedFeedback, setSubmittedFeedback] = useState<boolean>(false);
   const [secondsLeft, setSecondsLeft] = useState<number>(15);
-  const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
 
   useEffect(() => {
     if (!clearedRef.current) {
@@ -26,13 +23,11 @@ function PaymentSuccessContent() {
     }
   }, [clearCart]);
 
-  // Start redirect countdown
   useEffect(() => {
     const timer = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          setIsRedirecting(true);
           router.push("/orders");
           return 0;
         }
@@ -42,48 +37,41 @@ function PaymentSuccessContent() {
     return () => clearInterval(timer);
   }, [router]);
 
-  const handleSubmitFeedback = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmittedFeedback(true);
-  };
-
   return (
     <div style={{
       minHeight: "100vh",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
+      background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
       fontFamily: "var(--font-sans, Inter, sans-serif)",
       padding: "20px"
     }}>
       <div style={{
         background: "#ffffff",
-        padding: "40px",
-        borderRadius: "20px",
-        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.05)",
+        padding: "48px 40px 40px",
+        borderRadius: "24px",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
         textAlign: "center",
-        maxWidth: "480px",
+        maxWidth: "440px",
         width: "100%",
-        animation: "fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)"
+        animation: "fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)"
       }}>
-        {/* SVG Animated Checkmark */}
+        {/* Thumbs Up Icon */}
         <div style={{
-          width: "80px",
-          height: "80px",
-          margin: "0 auto 24px",
+          width: "88px",
+          height: "88px",
+          margin: "0 auto 20px",
           borderRadius: "50%",
-          background: "#ecfdf5",
+          background: "linear-gradient(135deg, #d1fae5, #a7f3d0)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center"
+          justifyContent: "center",
+          boxShadow: "0 8px 24px rgba(16,185,129,0.2)"
         }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" style={{
-              strokeDasharray: "50",
-              strokeDashoffset: "50",
-              animation: "drawCheckmark 0.6s ease forwards 0.2s"
-            }} />
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ animation: "thumbsUpBounce 0.6s ease 0.3s both" }}>
+            <path d="M7 22V11M2 13v7a2 2 0 0 0 2 2h12.4a2 2 0 0 0 1.94-1.57l1.6-7A2 2 0 0 0 18 9h-5V4a2 2 0 0 0-2-2 1 1 0 0 0-.87.52L7 11v11z" />
           </svg>
         </div>
 
@@ -94,143 +82,80 @@ function PaymentSuccessContent() {
           marginBottom: "8px",
           letterSpacing: "-0.5px"
         }}>
-          Payment Successful!
+          {isCOD ? "Order Placed Successfully!" : "Payment Successful!"}
         </h1>
         <p style={{
           fontSize: "14px",
           color: "#6b7280",
-          marginBottom: "20px",
-          lineHeight: "1.5"
+          marginBottom: "24px",
+          lineHeight: "1.6"
         }}>
-          Thank you for your order. Redirecting to your Order Summary in{" "}
+          {isCOD
+            ? "Your order has been placed. You will pay when it arrives."
+            : "Thank you for your payment. Your order is confirmed."}
+          <br />
+          Redirecting to your orders in{" "}
           <strong style={{ color: "#008060" }}>{secondsLeft}s</strong>...
         </p>
 
         {/* Order Info Card */}
         <div style={{
           background: "#f9fafb",
-          border: "1px solid #f3f4f6",
-          borderRadius: "12px",
-          padding: "16px 20px",
-          marginBottom: "24px",
+          border: "1px solid #e5e7eb",
+          borderRadius: "14px",
+          padding: "18px 20px",
+          marginBottom: "28px",
           textAlign: "left"
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-            <span style={{ fontSize: "13px", color: "#9ca3af", fontWeight: 500 }}>ORDER ID</span>
-            <span style={{ fontSize: "13px", color: "#111827", fontFamily: "monospace", fontWeight: 600 }}>{orderId}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <span style={{ fontSize: "11px", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Order ID</span>
+            <span style={{ fontSize: "13px", color: "#111827", fontFamily: "monospace", fontWeight: 700 }}>{orderId}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "13px", color: "#9ca3af", fontWeight: 500 }}>STATUS</span>
-            <span style={{ fontSize: "13px", color: "#10b981", fontWeight: 700 }}>PAID</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "10px", borderTop: "1px solid #e5e7eb" }}>
+            <span style={{ fontSize: "11px", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Status</span>
+            <span style={{
+              fontSize: "12px",
+              fontWeight: 700,
+              color: isCOD ? "#d97706" : "#059669",
+              background: isCOD ? "#fef3c7" : "#d1fae5",
+              padding: "4px 12px",
+              borderRadius: "100px",
+            }}>
+              {isCOD ? "PENDING" : "PAID"}
+            </span>
           </div>
         </div>
 
-        {/* Rate Our Experience widget */}
-        <div style={{
-          borderTop: "1px solid #f3f4f6",
-          paddingTop: "20px",
-          marginBottom: "28px"
-        }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>
-            Rate Our Experience
-          </h3>
-          {!submittedFeedback ? (
-            <form onSubmit={handleSubmitFeedback}>
-              <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "12px" }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    style={{
-                      fontSize: "28px",
-                      color: star <= (hoverRating || rating) ? "#fbbf24" : "#d1d5db",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 0,
-                      outline: "none"
-                    }}
-                  >
-                    ★
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
-                placeholder="Write optional feedback..."
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  fontSize: "13px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  outline: "none",
-                  marginBottom: "10px",
-                  boxSizing: "border-box"
-                }}
-              />
-              <button
-                type="submit"
-                disabled={rating === 0}
-                style={{
-                  background: rating > 0 ? "#111827" : "#9ca3af",
-                  color: "#ffffff",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  padding: "8px 16px",
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: rating > 0 ? "pointer" : "default"
-                }}
-              >
-                Submit Review
-              </button>
-            </form>
-          ) : (
-            <p style={{ fontSize: "13px", color: "#10b981", fontWeight: 600 }}>
-              Thank you for your feedback!
-            </p>
-          )}
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <Link href="/orders" style={{
-            background: "#008060",
+        <Link
+          href="/orders"
+          style={{
+            background: "#111827",
             color: "#ffffff",
             padding: "14px 24px",
-            borderRadius: "10px",
-            fontSize: "14px",
-            fontWeight: 600,
+            borderRadius: "12px",
+            fontSize: "15px",
+            fontWeight: 700,
             textDecoration: "none",
-            transition: "all 0.2s ease",
             display: "block",
-            boxShadow: "0 4px 6px rgba(0, 128, 96, 0.15)"
-          }}>
-            View My Orders Now
-          </Link>
-        </div>
+            transition: "all 0.2s ease",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.12)"
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#374151"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#111827"; e.currentTarget.style.transform = "none"; }}
+        >
+          View My Orders
+        </Link>
       </div>
 
       <style jsx global>{`
         @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(24px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes drawCheckmark {
-          to {
-            strokeDashoffset: 0;
-          }
+        @keyframes thumbsUpBounce {
+          0% { transform: scale(0); opacity: 0; }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
     </div>

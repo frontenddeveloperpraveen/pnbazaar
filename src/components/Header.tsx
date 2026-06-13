@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { Product } from "../data/db";
 import styles from "./Header.module.css";
 
@@ -12,6 +13,9 @@ export const Header: React.FC = () => {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { getCartCount, setCartDrawerOpen, products } = useCart();
+  const { user, logout } = useAuth();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
   const publishedProducts = products.filter((p) => p.status !== "draft");
   const [searchQuery, setSearchQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
@@ -65,6 +69,17 @@ export const Header: React.FC = () => {
         !searchContainerRef.current.contains(e.target as Node)
       ) {
         setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Click outside listener for profile menu
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -196,6 +211,30 @@ export const Header: React.FC = () => {
 
           {/* Cart Trigger (desktop) */}
           <div className={`${styles.actions} ${isCheckout ? styles.checkoutHide : ""}`}>
+            <div ref={profileRef} style={{ position: "relative" }}>
+              {user ? (
+                <button onClick={() => setShowProfileMenu(!showProfileMenu)} className={styles.profileBtn} aria-label="Profile">
+                  <span className={styles.profileAvatar}>{user.name.charAt(0).toUpperCase()}</span>
+                </button>
+              ) : (
+                <Link href="/orders" className={styles.profileBtn} aria-label="Sign in">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </Link>
+              )}
+              {showProfileMenu && user && (
+                <div className={styles.profileDropdown}>
+                  <div className={styles.profileDropdownHeader}>
+                    <span className={styles.profileName}>{user.name}</span>
+                    <span className={styles.profileEmail}>{user.email}</span>
+                  </div>
+                  <Link href="/orders" className={styles.profileDropdownItem} onClick={() => setShowProfileMenu(false)}>My Orders</Link>
+                  <button onClick={() => { logout(); setShowProfileMenu(false); }} className={styles.profileDropdownItem} style={{ color: "#ef4444", border: "none", background: "none", cursor: "pointer", width: "100%", textAlign: "left", fontSize: "13px", padding: "8px 14px" }}>Sign Out</button>
+                </div>
+              )}
+            </div>
             <button onClick={handleCartClick} className={styles.cartBtn} aria-label="Shopping Cart">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.cartIcon}>
                 <circle cx="9" cy="21" r="1"></circle>

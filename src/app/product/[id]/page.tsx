@@ -19,7 +19,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   const title = product.seoMetaTitle || `${product.name} | PN Bazaar`;
   const description = product.seoMetaDescription || product.description;
-  const mainImage = product.image; // "img is main image" from user prompt!
+  const ogDescription = "Pay online and get flat 10% off! Shop now at PN Bazaar.";
+  const mainImage = product.image;
 
   return {
     title,
@@ -27,8 +28,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     keywords: product.seoKeywords ? product.seoKeywords.split(",").map(k => k.trim()) : product.tags || [],
     openGraph: {
       title,
-      description,
-      type: "website", // Standard OG type or casted
+      description: ogDescription,
+      type: "website",
       url: `https://pnbazaar.com/product/${product.slug}`,
       images: [
         {
@@ -52,7 +53,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     twitter: {
       card: "summary_large_image",
       title,
-      description,
+      description: ogDescription,
       images: [mainImage],
     },
   };

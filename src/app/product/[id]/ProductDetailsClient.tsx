@@ -598,6 +598,25 @@ export default function ProductDetailsClient({
           </div>
         </div>
 
+        {/* Online Payment Banner */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 14px",
+            marginTop: "10px",
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "8px",
+          }}
+        >
+
+          <span style={{ fontSize: "13px", color: "#166534", fontWeight: 600 }}>
+            Online Payment 10% instant discount
+          </span>
+        </div>
+
         {/* Accordions */}
         <div className={styles.accordions}>
           {product.returnPolicy && product.deliveryType ? (

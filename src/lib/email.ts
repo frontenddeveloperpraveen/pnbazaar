@@ -458,6 +458,40 @@ export async function sendOrderCancelledEmail(order: OrderEmailPayload) {
   });
 }
 
+// Send OTP Email
+export async function sendOtpEmail(email: string, otp: string, name: string) {
+  const html = getEmailWrapper(
+    "Your OTP for Login - PN Bazaar",
+    `
+      <div class="badge badge-info">🔐 Login Verification</div>
+      <h2 style="margin-top: 0; color: #1a1a1a;">Hi ${name},</h2>
+      <p style="color: #4a5568; font-size: 15px;">Use the OTP below to verify your email and access your orders.</p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <div style="display: inline-block; background: #f3f4f6; padding: 16px 40px; border-radius: 12px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #111827;">
+          ${otp}
+        </div>
+      </div>
+
+      <p style="color: #6b7280; font-size: 13px;">This OTP is valid for <strong>10 minutes</strong>. If you did not request this, please ignore this email.</p>
+    `
+  );
+
+  await transporter.sendMail({
+    from: `"PN Bazaar" <noreply@pnbazaar.shop>`,
+    to: email,
+    subject: `Your Login OTP - PN Bazaar`,
+    html,
+    attachments: [
+      {
+        filename: 'logo.png',
+        path: './public/logo.png',
+        cid: 'pnbazaar-logo'
+      }
+    ]
+  });
+}
+
 // 4. Send Order Delivered Email
 export async function sendOrderDeliveredEmail(order: OrderEmailPayload) {
   const productsHtml = getProductRows(order.items);

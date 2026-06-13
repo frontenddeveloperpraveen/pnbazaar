@@ -6,6 +6,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import CartDrawer from "./CartDrawer";
 import { trackEvent } from "../lib/tracker";
+import { AuthProvider } from "../context/AuthContext";
 
 export default function ClientLayoutWrapper({
   children,
@@ -118,29 +119,29 @@ export default function ClientLayoutWrapper({
     </div>
   );
 
-  if (isAdmin) {
-    return (
-      <>
-        {loaderOverlay}
-        <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-          {children}
-        </main>
-      </>
-    );
-  }
-
   return (
-    <>
-      {loaderOverlay}
-      <Suspense fallback={<div style={{ height: "110px" }} />}>
-        <Header />
-      </Suspense>
-      <CartDrawer />
-      <main className="main-content" style={{ marginTop: isCheckout ? "0" : "110px", minHeight: isCheckout ? "100vh" : "calc(100vh - 110px - 380px)", display: "flex", flexDirection: "column" }}>
-        {children}
-      </main>
-      {!isCheckout && <Footer />}
-    </>
+    <AuthProvider>
+      {isAdmin ? (
+        <>
+          {loaderOverlay}
+          <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+            {children}
+          </main>
+        </>
+      ) : (
+        <>
+          {loaderOverlay}
+          <Suspense fallback={<div style={{ height: "110px" }} />}>
+            <Header />
+          </Suspense>
+          <CartDrawer />
+          <main className="main-content" style={{ marginTop: isCheckout ? "0" : "110px", minHeight: isCheckout ? "100vh" : "calc(100vh - 110px - 380px)", display: "flex", flexDirection: "column" }}>
+            {children}
+          </main>
+          {!isCheckout && <Footer />}
+        </>
+      )}
+    </AuthProvider>
   );
 }
 

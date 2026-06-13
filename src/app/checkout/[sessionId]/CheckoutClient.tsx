@@ -623,7 +623,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
           localStorage.removeItem("checkout_" + sessionId);
           await fetch("/api/abandoned-checkouts?sessionId=" + encodeURIComponent(sessionId), { method: "DELETE" });
         } catch {}
-        router.push(`/payment/success?orderId=${dbOrderId}`);
+        router.push(`/payment/success?orderId=${dbOrderId}&method=COD`);
         return;
       }
 
@@ -655,7 +655,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
               clearCart();
               localStorage.removeItem("checkout_" + sessionId);
               await fetch("/api/abandoned-checkouts?sessionId=" + encodeURIComponent(sessionId), { method: "DELETE" });
-              router.push(`/payment/success?orderId=${dbOrderId}`);
+              router.push(`/payment/success?orderId=${dbOrderId}&method=ONLINE`);
             } else {
               setErrors({ form: verifyData.error || "Payment verification failed. Please contact PN Bazaar support." });
               setSubmitting(false);

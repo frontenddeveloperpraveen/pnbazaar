@@ -2,13 +2,20 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
 import { sendOrderConfirmedEmail } from "../../../lib/email";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const db = await getDatabase();
     const collection = db.collection("orders");
     
-    // Retrieve all orders sorted by date/id descending
-    const orders = await collection.find({}).sort({ _id: -1 }).toArray();
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get("email");
+    
+    const query: Record<string, any> = {};
+    if (email) {
+      query["customerInfo.email"] = email;
+    }
+    
+    const orders = await collection.find(query).sort({ _id: -1 }).toArray();
     
     const formattedOrders = orders.map(o => {
       const { _id, ...rest } = o;
