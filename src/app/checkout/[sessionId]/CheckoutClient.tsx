@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "../../../context/CartContext";
+import { useAuth } from "../../../context/AuthContext";
 import styles from "./checkout.module.css";
 
 interface CheckoutSession {
@@ -40,6 +41,7 @@ const STORAGE_KEY = "saved_addresses";
 export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
   const router = useRouter();
   const { setCartDrawerOpen, clearCart } = useCart();
+  const { user } = useAuth();
 
   const [session, setSession] = useState<CheckoutSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -237,8 +239,8 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sessionId,
-        name: "",
-        email: "",
+        name: user?.name || "",
+        email: user?.email || "",
         phone: "",
         items: session.cart.map((item) => ({
           productId: item.product?.id || item.product?._id,
@@ -253,7 +255,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
         ipLocation,
       }),
     }).catch(() => {});
-  }, [session, sessionId, lat, lng, ipLocation]);
+  }, [session, sessionId, lat, lng, ipLocation, user?.name, user?.email]);
 
   useEffect(() => {
     if (!session) return;
@@ -263,12 +265,12 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
-          name: billingName,
-          email: billingEmail,
+          name: user?.name || billingName,
+          email: user?.email || billingEmail,
           phone: billingPhone,
           formData: {
-            billingName,
-            billingEmail,
+            billingName: user?.name || billingName,
+            billingEmail: user?.email || billingEmail,
             billingPhone,
             billingAddressLine1,
             billingAddressLine2,
@@ -305,6 +307,8 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
     billingPincode,
     shippingName,
     shippingAddressLine1,
+    user?.name,
+    user?.email,
     shippingAddressLine2,
     shippingLandmark,
     shippingState,

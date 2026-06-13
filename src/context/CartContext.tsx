@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '../data/db';
 import { trackEvent, getSessionId } from '../lib/tracker';
+import { useAuth } from './AuthContext';
 
 export interface CartItem {
   product: Product;
@@ -108,6 +109,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [ipLocation, setIpLocation] = useState<string>("");
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchIpLocation = async () => {
@@ -180,10 +182,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (cart.length === 0) return;
     const timer = setTimeout(() => {
-      saveAbandonedCart();
+      saveAbandonedCart(user?.email, user?.name);
     }, 30000);
     return () => clearTimeout(timer);
-  }, [cart]);
+  }, [cart, user?.email, user?.name]);
 
   // Save cart helper
   const saveCart = (newCart: CartItem[]) => {
@@ -577,13 +579,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         quantity: item.quantity,
         image: item.product.image
       }));
+      // Use authenticated user info if available, fallback to passed params
+      const userEmail = user?.email || email;
+      const userName = user?.name || name;
       await fetch("/api/abandoned-carts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email,
-          phone,
-          name,
+          email: userEmail,
+          phone: phone || "",
+          name: userName,
           items,
           total: getCartTotal(),
           sessionId: getSessionId(),

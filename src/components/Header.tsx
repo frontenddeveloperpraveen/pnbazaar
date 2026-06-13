@@ -13,7 +13,7 @@ export const Header: React.FC = () => {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { getCartCount, setCartDrawerOpen, products } = useCart();
-  const { user, logout } = useAuth();
+  const { user, logout, initialized } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const publishedProducts = products.filter((p) => p.status !== "draft");
@@ -212,17 +212,19 @@ export const Header: React.FC = () => {
           {/* Cart Trigger (desktop) */}
           <div className={`${styles.actions} ${isCheckout ? styles.checkoutHide : ""}`}>
             <div ref={profileRef} style={{ position: "relative" }}>
-              {user ? (
+              {initialized && user ? (
                 <button onClick={() => setShowProfileMenu(!showProfileMenu)} className={styles.profileBtn} aria-label="Profile">
                   <span className={styles.profileAvatar}>{user.name.charAt(0).toUpperCase()}</span>
                 </button>
-              ) : (
+              ) : initialized && !user ? (
                 <Link href="/orders" className={styles.profileBtn} aria-label="Sign in">
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                 </Link>
+              ) : (
+                <div style={{ width: 32, height: 32 }} />
               )}
               {showProfileMenu && user && (
                 <div className={styles.profileDropdown}>
