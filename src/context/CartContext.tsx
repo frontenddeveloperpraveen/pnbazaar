@@ -14,7 +14,7 @@ export interface Order {
   date: string;
   items: CartItem[];
   total: number;
-  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Return' | 'Cancelled' | 'Archived';
+  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Return' | 'Cancelled' | 'Archived' | 'Cancellation Requested';
   customerInfo: {
     name: string;
     email: string;
@@ -28,6 +28,7 @@ export interface Order {
   emailSent?: boolean;
   defaultOrdered?: boolean;
   archived?: boolean;
+  cancelReason?: string;
 }
 
 export interface PromoCode {
@@ -363,6 +364,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Cart operations (uses product.salePrice if available for promotional markdowns)
   const addToCart = (product: Product, quantity = 1, suppressDrawer = false) => {
+    const currentTotalQuantity = cart.reduce((total, item) => total + item.quantity, 0);
+    if (currentTotalQuantity + quantity > 5) {
+      alert("Maximum purchase limit is 5 items per order.");
+      return;
+    }
     const existingIndex = cart.findIndex(item => item.product.id === product.id);
     if (existingIndex > -1) {
       const newCart = [...cart];
@@ -383,6 +389,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
+      return;
+    }
+    const currentItem = cart.find(item => item.product.id === productId);
+    const currentItemQty = currentItem ? currentItem.quantity : 0;
+    const currentTotalQuantity = cart.reduce((total, item) => total + item.quantity, 0);
+    if (currentTotalQuantity - currentItemQty + quantity > 5) {
+      alert("Maximum purchase limit is 5 items per order.");
       return;
     }
     const newCart = cart.map(item => 
@@ -455,6 +468,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [key: string]: any;
   }) => {
     try {
+      const currentTotalQuantity = cart.reduce((total, item) => total + item.quantity, 0);
+      if (currentTotalQuantity > 5) {
+        alert("Maximum purchase limit is 5 items per order.");
+        return null;
+      }
       const totalAmount = getDiscountedTotal() + getShippingFee() + (customerInfo.giftWrap ? 35 : 0);
       const orderPayload = {
         items: [...cart],

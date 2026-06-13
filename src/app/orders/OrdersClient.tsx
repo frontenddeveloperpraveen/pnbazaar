@@ -10,9 +10,20 @@ const STEPS = ["Processing", "Shipped", "Delivered"];
 
 function OrdersContent() {
   const searchParams = useSearchParams();
-  const { orders } = useCart();
+  const { orders, updateOrderStatus } = useCart();
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+
+  const handleRequestCancellation = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to request cancellation for this order?")) return;
+    try {
+      await updateOrderStatus(orderId, 'Cancellation Requested' as any);
+      alert("Cancellation request submitted successfully. Waiting for admin confirmation.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit cancellation request.");
+    }
+  };
 
   useEffect(() => {
     if (searchParams.get("success") === "true") {
@@ -183,6 +194,24 @@ function OrdersContent() {
                             })()}
                           </p>
                         </div>
+                        {['Pending', 'Processing'].includes(order.status) && (
+                          <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f0f0f0" }}>
+                            <button
+                              onClick={() => handleRequestCancellation(order.id)}
+                              style={{ width: "100%", padding: "10px 16px", backgroundColor: "#fecaca", color: "#b91c1c", border: "1px solid #fca5a5", borderRadius: "100px", fontWeight: 600, fontSize: "13px", cursor: "pointer", transition: "all 0.2s" }}
+                            >
+                              Request Cancellation
+                            </button>
+                          </div>
+                        )}
+                        {order.status === 'Cancellation Requested' && (
+                          <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f0f0f0" }}>
+                            <p style={{ color: "#b91c1c", fontSize: "13px", fontWeight: 600, margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#ef4444", display: "inline-block" }}></span>
+                              Cancellation request pending approval
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

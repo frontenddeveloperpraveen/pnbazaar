@@ -12,6 +12,13 @@ export async function GET() {
     const totalViews = await collection.countDocuments({ type: "pageview" });
     const totalClicks = await collection.countDocuments({ type: "click" });
 
+    // Calculate live users (active sessionIds in the last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const liveUsersGroup = await collection.distinct("sessionId", {
+      timestamp: { $gte: fiveMinutesAgo }
+    });
+    const liveUsers = liveUsersGroup.length;
+
     // Page views aggregation
     const pageViewsGroup = await collection.aggregate([
       { $match: { type: "pageview" } },
@@ -77,6 +84,7 @@ export async function GET() {
     return NextResponse.json({
       totalViews,
       totalClicks,
+      liveUsers,
       events: formattedEvents,
       pageViews: pageViewsGroup,
       buttonClicks: buttonClicksGroup,

@@ -6,14 +6,16 @@ import Link from "next/link";
 import { useCart, Order } from "../../../../context/CartContext";
 import styles from "./order.module.css";
 
-const STATUS_LIST = ["Pending", "Processing", "Shipped", "Delivered", "Return", "Cancelled"];
+const STATUS_LIST = ["Pending", "Processing", "Shipped", "Delivered", "Return", "Cancelled", "Cancellation Requested"];
 const STATUS_COLORS: Record<string, string> = {
   Pending: "#fef3c7", Processing: "#fef3c7", Shipped: "#dbeafe", Delivered: "#d1fae5",
-  OnHold: "#ffe4e6", Return: "#ffedd5", Cancelled: "#f3f4f6", Archived: "#f3f4f6"
+  OnHold: "#ffe4e6", Return: "#ffedd5", Cancelled: "#f3f4f6", Archived: "#f3f4f6",
+  "Cancellation Requested": "#fee2e2"
 };
 const STATUS_TEXT_COLORS: Record<string, string> = {
   Pending: "#92400e", Processing: "#92400e", Shipped: "#1e40af", Delivered: "#065f46",
-  OnHold: "#9f1239", Return: "#9a3412", Cancelled: "#6b7280", Archived: "#6b7280"
+  OnHold: "#9f1239", Return: "#9a3412", Cancelled: "#6b7280", Archived: "#6b7280",
+  "Cancellation Requested": "#b91c1c"
 };
 
 const COURIER_PATTERNS: { name: string; patterns: RegExp[] }[] = [
@@ -54,6 +56,41 @@ export default function OrderDetailPage() {
   const [courierService, setCourierService] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const handleCancelConfirmFlow = async (action: "Approve" | "Reject") => {
+    if (!order) return;
+    if (action === "Approve") {
+      const reason = window.prompt("Enter cancellation approval reason:") || "Customer request approved";
+      setSaving(true);
+      try {
+        await updateOrderStatus(order.id, "Cancelled", undefined);
+        await fetch(`/api/orders/${order.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "Cancelled", cancelReason: reason })
+        });
+        setOrder({ ...order, status: "Cancelled", cancelReason: reason });
+        showToast("Cancellation approved and email sent", "success");
+      } catch (err) {
+        showToast("Failed to approve cancellation", "error");
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      if (!window.confirm("Reject customer cancellation request and return order to Processing?")) return;
+      setSaving(true);
+      try {
+        await updateOrderStatus(order.id, "Processing", undefined);
+        setOrder({ ...order, status: "Processing" });
+        showToast("Cancellation request rejected", "success");
+      } catch (err) {
+        showToast("Failed to reject request", "error");
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("admin_access_token");
@@ -110,7 +147,15 @@ export default function OrderDetailPage() {
     setOrder({ ...order, status: confirmingStatus as Order["status"], ...(trackingData || {}) });
     setConfirmingStatus(null);
     try {
-      await updateOrderStatus(order.id, confirmingStatus as Order["status"], trackingData);
+      if (confirmingStatus === "Cancelled") {
+        await fetch(`/api/orders/${order.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "Cancelled", cancelReason })
+        });
+      } else {
+        await updateOrderStatus(order.id, confirmingStatus as Order["status"], trackingData);
+      }
       const emailMsg = sendEmail ? " — email notification sent" : " — email skipped";
       showToast(`Status updated to "${confirmingStatus}"${emailMsg}`, "success");
     } catch {
@@ -124,6 +169,7 @@ export default function OrderDetailPage() {
     setConfirmingStatus(null);
     setTrackingLink("");
     setCourierService("");
+    setCancelReason("");
   };
 
   if (!auth || loading) {
@@ -211,6 +257,29 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
+      {order.status === "Cancellation Requested" && (
+        <div style={{ padding: "16px 20px", backgroundColor: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "8px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+          <div>
+            <h4 style={{ margin: "0 0 4px 0", color: "#991b1b", fontSize: "14px", fontWeight: 700 }}>Cancellation Requested by Customer</h4>
+            <p style={{ margin: 0, color: "#7f1d1d", fontSize: "13px" }}>This customer has requested to cancel this order. Please approve or reject the request.</p>
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button 
+              onClick={() => handleCancelConfirmFlow("Approve")}
+              style={{ padding: "8px 16px", backgroundColor: "#dc2626", color: "white", border: "none", borderRadius: "4px", fontWeight: 600, fontSize: "13px", cursor: "pointer" }}
+            >
+              Approve & Cancel
+            </button>
+            <button 
+              onClick={() => handleCancelConfirmFlow("Reject")}
+              style={{ padding: "8px 16px", backgroundColor: "#edf2f7", color: "#4a5568", border: "1px solid #cbd5e1", borderRadius: "4px", fontWeight: 600, fontSize: "13px", cursor: "pointer" }}
+            >
+              Reject Request
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={styles.grid}>
         {/* Items */}
         <div className={styles.card}>
@@ -267,6 +336,18 @@ export default function OrderDetailPage() {
               <span className={styles.detailLabel}>Phone</span>
               <span>{order.customerInfo?.phone || "—"}</span>
             </div>
+            {order.customerInfo?.ipLocation && (
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>IP Location</span>
+                <span>{order.customerInfo.ipLocation}</span>
+              </div>
+            )}
+            {order.customerInfo?.lat && order.customerInfo?.lng && (
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>Coordinates</span>
+                <span>{order.customerInfo.lat.toFixed(6)}, {order.customerInfo.lng.toFixed(6)}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -436,6 +517,21 @@ export default function OrderDetailPage() {
                 {courierService && (
                   <span className={styles.courierBadge}>Detected courier: {courierService}</span>
                 )}
+              </div>
+            )}
+
+            {confirmingStatus === "Cancelled" && (
+              <div className={styles.modalField}>
+                <label className={styles.modalLabel}>Reason for Cancellation *</label>
+                <textarea
+                  className={styles.modalInput}
+                  rows={3}
+                  placeholder="e.g. Item out of stock, customer requested cancel, etc."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid #d1d5db", marginTop: "4px", outline: "none", resize: "vertical" }}
+                  required
+                />
               </div>
             )}
 

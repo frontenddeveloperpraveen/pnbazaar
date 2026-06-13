@@ -17,15 +17,18 @@ export default function CategoryClient({ slug }: CategoryClientProps) {
   const rawProducts = allProducts.filter((p) => p.category === slug && p.status !== "draft");
 
   // Filtering states
+  const maxProductPrice = rawProducts.length > 0 ? Math.max(...rawProducts.map((p) => p.price)) : 10000;
   const [products, setProducts] = useState<Product[]>(rawProducts);
-  const [priceRange, setPriceRange] = useState<number>(10000);
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(maxProductPrice);
   const [sortBy, setSortBy] = useState<string>("default");
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   useEffect(() => {
     let filtered = [...rawProducts];
 
     // Price Filter
-    filtered = filtered.filter((p) => p.price <= priceRange);
+    filtered = filtered.filter((p) => p.price >= minPrice && p.price <= maxPrice);
 
     // Sort Filter
     if (sortBy === "price-low") {
@@ -37,7 +40,7 @@ export default function CategoryClient({ slug }: CategoryClientProps) {
     }
 
     setProducts(filtered);
-  }, [priceRange, sortBy, slug, allProducts]);
+  }, [minPrice, maxPrice, sortBy, slug, allProducts, rawProducts]);
 
   if (!category) {
     return (
@@ -63,66 +66,122 @@ export default function CategoryClient({ slug }: CategoryClientProps) {
         </div>
       </header>
 
-      {/* Main Content (Filters + Products) */}
-      <div className={styles.layout}>
-        {/* Sidebar Filters */}
-        <aside className={styles.filters}>
-          <h3 className={styles.filterTitle}>Filter & Sort</h3>
-
-          {/* Sort By */}
-          <div className={styles.filterGroup}>
-            <label className={styles.label}>Sort By</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className={styles.select}
-              id="sort-select"
-            >
-              <option value="default">Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Top Rated</option>
-            </select>
-          </div>
-
-          {/* Price Range Slider */}
-          <div className={styles.filterGroup}>
-            <div className={styles.sliderLabelRow}>
-              <label className={styles.label}>Max Price</label>
-              <span className={styles.priceVal}>₹{priceRange.toLocaleString("en-IN")}</span>
-            </div>
-            <input
-              type="range"
-              min="1000"
-              max="10000"
-              step="500"
-              value={priceRange}
-              onChange={(e) => setPriceRange(Number(e.target.value))}
-              className={styles.slider}
-              id="price-range-slider"
-            />
-            <div className={styles.sliderLimits}>
-              <span>₹1,000</span>
-              <span>₹10,000</span>
-            </div>
-          </div>
-        </aside>
-
-        {/* Products Grid */}
-        <div className={styles.mainGrid}>
-          {products.length > 0 ? (
-            <div className={styles.grid}>
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          ) : (
-            <div className={styles.empty}>
-              <h3>No products match these filters</h3>
-              <p>Try broadening your price range or sorting option.</p>
-            </div>
-          )}
+      {/* Top Filter Bar */}
+      <div className={styles.topFilterBar}>
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)} 
+          className={`${styles.expandButton} ${isExpanded ? styles.expandActive : ""}`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "8px" }}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filter and Sort {isExpanded ? "▲" : "▼"}
+        </button>
+        
+        <div className={styles.activeSummary}>
+          <span>Price: ₹{minPrice.toLocaleString("en-IN")} - ₹{maxPrice.toLocaleString("en-IN")}</span>
+          <span className={styles.divider}>|</span>
+          <span>Sort: {sortBy === "default" ? "Featured" : sortBy === "price-low" ? "Price: Low to High" : sortBy === "price-high" ? "Price: High to Low" : "Top Rated"}</span>
         </div>
+      </div>
+
+      {/* Expanded top filter drawer */}
+      {isExpanded && (
+        <div className={styles.expandedPanel}>
+          <div className={styles.filterGrid}>
+            {/* Sort Column */}
+            <div className={styles.filterCol}>
+              <label className={styles.filterLabel}>Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className={styles.filterSelect}
+              >
+                <option value="default">Featured</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="rating">Top Rated</option>
+              </select>
+            </div>
+
+            {/* Price Column */}
+            <div className={styles.filterCol}>
+              <label className={styles.filterLabel}>Price Range</label>
+              <div className={styles.priceInputsRow}>
+                <div className={styles.priceInputWrapper}>
+                  <span className={styles.currencyPrefix}>₹</span>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={minPrice || 0}
+                    onChange={(e) => setMinPrice(Math.max(0, Number(e.target.value)))}
+                    className={styles.priceInput}
+                  />
+                </div>
+                <span className={styles.rangeText}>to</span>
+                <div className={styles.priceInputWrapper}>
+                  <span className={styles.currencyPrefix}>₹</span>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={maxPrice || 0}
+                    onChange={(e) => setMaxPrice(Math.max(minPrice, Number(e.target.value)))}
+                    className={styles.priceInput}
+                  />
+                </div>
+              </div>
+              <div style={{ marginTop: "12px" }}>
+                <input
+                  type="range"
+                  min="0"
+                  max={maxProductPrice}
+                  step="100"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(Number(e.target.value))}
+                  className={styles.rangeSlider}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
+                  <span>₹0</span>
+                  <span>Max: ₹{maxProductPrice.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions Column */}
+            <div className={styles.filterActionsCol}>
+              <button 
+                onClick={() => {
+                  setMinPrice(0);
+                  setMaxPrice(maxProductPrice);
+                  setSortBy("default");
+                }}
+                className={styles.resetBtn}
+              >
+                Reset All
+              </button>
+              <button 
+                onClick={() => setIsExpanded(false)}
+                className={styles.applyBtn}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Products Grid */}
+      <div className={styles.productsSection}>
+        {products.length > 0 ? (
+          <div className={styles.grid}>
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className={styles.empty}>
+            <h3>No products match these filters</h3>
+            <p>Try broadening your price range or sorting option.</p>
+          </div>
+        )}
       </div>
     </div>
   );

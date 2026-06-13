@@ -10,6 +10,7 @@ function PaymentSuccessContent() {
   const router = useRouter();
   const orderId = searchParams.get("orderId") || "—";
   const { clearCart } = useCart();
+  const clearedRef = React.useRef(false);
 
   const [rating, setRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
@@ -19,7 +20,10 @@ function PaymentSuccessContent() {
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
 
   useEffect(() => {
-    clearCart();
+    if (!clearedRef.current) {
+      clearedRef.current = true;
+      clearCart();
+    }
   }, [clearCart]);
 
   // Start redirect countdown

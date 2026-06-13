@@ -64,7 +64,7 @@ function AdminPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabFromUrl = searchParams.get("tab") || "home";
-  const validTabs = ["home", "orders", "products", "discounts", "analytics", "aborted-cart", "abandoned-checkouts", "reviews", "faq"];
+  const validTabs = ["home", "orders", "products", "discounts", "analytics", "aborted-cart", "abandoned-checkouts", "reviews", "faq", "newsletter"];
   const activeTab = validTabs.includes(tabFromUrl) ? tabFromUrl : "home";
 
   // Login States
@@ -72,6 +72,24 @@ function AdminPageContent() {
   const [password, setPassword] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginError, setLoginError] = useState("");
+
+  // Subscribers States
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [subscribersLoading, setSubscribersLoading] = useState(true);
+
+  const fetchSubscribers = async () => {
+    try {
+      const res = await fetch("/api/newsletter");
+      if (res.ok) {
+        const data = await res.json();
+        setSubscribers(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubscribersLoading(false);
+    }
+  };
 
   // Analytics States
   const [analyticsData, setAnalyticsData] = useState<any>(null);
@@ -176,7 +194,7 @@ function AdminPageContent() {
   };
 
   React.useEffect(() => {
-    if (activeTab === "analytics" || activeTab === "aborted-cart" || activeTab === "abandoned-checkouts") {
+    if (activeTab === "home" || activeTab === "analytics" || activeTab === "aborted-cart" || activeTab === "abandoned-checkouts") {
       fetchAnalytics();
       const interval = setInterval(fetchAnalytics, 15000);
       return () => clearInterval(interval);
@@ -200,6 +218,13 @@ function AdminPageContent() {
   React.useEffect(() => {
     fetchFaqs();
   }, []);
+
+  // Fetch subscribers when newsletter tab becomes active
+  React.useEffect(() => {
+    if (activeTab === "newsletter") {
+      fetchSubscribers();
+    }
+  }, [activeTab]);
 
   // Track new orders since last view
   React.useEffect(() => {
@@ -1203,6 +1228,12 @@ function AdminPageContent() {
           >
             FAQ
           </button>
+          <button
+            onClick={() => router.push("/admin?tab=newsletter")}
+            className={`${styles.navLink} ${activeTab === "newsletter" ? styles.navLinkActive : ""}`}
+          >
+            Newsletter
+          </button>
         </nav>
 
         <div className={styles.sidebarFooter}>
@@ -1222,7 +1253,15 @@ function AdminPageContent() {
       {/* Main Panel Content */}
       <main className={styles.mainPanel}>
         <header className={styles.dashboardHeader}>
-          <h2>Shopify Store Administration</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <h2>Shopify Store Administration</h2>
+            {analyticsData && typeof analyticsData.liveUsers === "number" && (
+              <div className={styles.liveBadge} title="Users active on the storefront in the last 5 minutes">
+                <span className={styles.liveDot}></span>
+                <span>{analyticsData.liveUsers} Active User{analyticsData.liveUsers === 1 ? "" : "s"} Live</span>
+              </div>
+            )}
+          </div>
           <Link href="/" className={styles.viewOnlineStore}>
             View online store
           </Link>
@@ -1410,14 +1449,14 @@ function AdminPageContent() {
 
         {/* TAB 2: ORDERS MANAGEMENT */}
         {activeTab === "orders" && (() => {
-          const STATUS_LIST = ["Pending", "Processing", "Shipped", "Delivered", "Return", "Cancelled"];
+          const STATUS_LIST = ["Pending", "Processing", "Shipped", "Delivered", "Return", "Cancelled", "Cancellation Requested"];
           const STATUS_COLORS: Record<string, string> = {
             Pending: "#fef3c7", Processing: "#fef3c7", Shipped: "#dbeafe", Delivered: "#d1fae5",
-            Return: "#ffedd5", Cancelled: "#f3f4f6", Archived: "#f3f4f6"
+            Return: "#ffedd5", Cancelled: "#f3f4f6", Archived: "#f3f4f6", "Cancellation Requested": "#fee2e2"
           };
           const STATUS_TEXT_COLORS: Record<string, string> = {
             Pending: "#92400e", Processing: "#92400e", Shipped: "#1e40af", Delivered: "#065f46",
-            Return: "#9a3412", Cancelled: "#6b7280", Archived: "#6b7280"
+            Return: "#9a3412", Cancelled: "#6b7280", Archived: "#6b7280", "Cancellation Requested": "#b91c1c"
           };
           const statusCounts: Record<string, number> = {};
           STATUS_LIST.forEach(s => statusCounts[s] = orders.filter((o: any) => o.status === s && !o.archived).length);
@@ -4268,6 +4307,66 @@ function AdminPageContent() {
                               <button onClick={() => handleFaqEdit(f)} style={{ background: "#f3f4f6", border: "1px solid #e1e3e5", borderRadius: "4px", padding: "4px 8px", fontSize: "11px", cursor: "pointer" }}>Edit</button>
                               <button onClick={() => handleFaqDelete(f._id)} style={{ background: "none", border: "1px solid #ef4444", borderRadius: "4px", padding: "4px 8px", fontSize: "11px", cursor: "pointer", color: "#ef4444" }}>Del</button>
                             </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* TAB 9: Newsletter Subscribers */}
+        {activeTab === "newsletter" && (() => {
+          const handleDeleteSubscriber = async (id: string) => {
+            if (!window.confirm("Remove this subscriber?")) return;
+            try {
+              const res = await fetch(`/api/newsletter?id=${id}`, { method: "DELETE" });
+              if (res.ok) {
+                fetchSubscribers();
+              } else {
+                alert("Failed to delete subscriber");
+              }
+            } catch (err) {
+              console.error(err);
+            }
+          };
+
+          return (
+            <div className={styles.tabContent}>
+              <div className={styles.tabTitleArea}>
+                <h3>Newsletter Subscribers</h3>
+                <p>Manage users who subscribed via the Connect With Us footer form</p>
+              </div>
+
+              <div className={styles.tableScrollWrapper}>
+                {subscribersLoading ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>Loading subscribers...</div>
+                ) : subscribers.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>No subscribers yet.</div>
+                ) : (
+                  <table className={styles.shopifyTable}>
+                    <thead>
+                      <tr>
+                        <th>Email Address</th>
+                        <th>Subscribed Date</th>
+                        <th style={{ width: "100px" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subscribers.map((s: any) => (
+                        <tr key={s._id}>
+                          <td style={{ fontSize: "13px", fontWeight: 600 }}>{s.email}</td>
+                          <td style={{ fontSize: "12px", color: "var(--text-muted)" }}>{new Date(s.subscribedAt).toLocaleString("en-IN")}</td>
+                          <td>
+                            <button
+                              onClick={() => handleDeleteSubscriber(s._id)}
+                              style={{ background: "none", border: "1px solid #ef4444", borderRadius: "4px", padding: "4px 8px", fontSize: "11px", cursor: "pointer", color: "#ef4444" }}
+                            >
+                              Remove
+                            </button>
                           </td>
                         </tr>
                       ))}

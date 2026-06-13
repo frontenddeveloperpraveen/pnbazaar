@@ -587,6 +587,9 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
       shippingAddressLine2: sameAsBilling ? line2 : shippingAddressLine2,
       shippingLandmark: sameAsBilling ? landmark : shippingLandmark,
       paymentMethod: paymentMethod === "ONLINE" ? "Online (Razorpay)" : "COD",
+      lat,
+      lng,
+      ipLocation,
     };
 
     try {
