@@ -21,13 +21,15 @@ export const CartDrawer: React.FC = () => {
     removeDiscountCode,
     autoOfferDiscount,
     createCheckoutSession,
-    getFinalTotal
+    getFinalTotal,
+    promoCodes
   } = useCart();
 
   const drawerRef = useRef<HTMLDivElement>(null);
   const [promoInput, setPromoInput] = useState("");
   const [promoError, setPromoError] = useState("");
   const [promoSuccess, setPromoSuccess] = useState(false);
+  const [showOffers, setShowOffers] = useState(false);
 
   // Close drawer on escape key
   useEffect(() => {
@@ -186,6 +188,13 @@ export const CartDrawer: React.FC = () => {
               <div className={styles.itemsList}>
                 {cart.map((item) => (
                   <div key={item.product.id} className={styles.item}>
+                    <button
+                      className={styles.removeBtn}
+                      onClick={() => removeFromCart(item.product.id)}
+                      aria-label={`Remove ${item.product.name}`}
+                    >
+                      Remove
+                    </button>
                     <div className={styles.imgWrapper}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -200,7 +209,7 @@ export const CartDrawer: React.FC = () => {
                         className={styles.name}
                         onClick={() => setCartDrawerOpen(false)}
                       >
-                        {item.product.name}
+                        {item.product.name.length > 30 ? item.product.name.slice(0, 30) + "…" : item.product.name}
                       </Link>
                       <span className={styles.category}>
                         {item.product.category.replace("-", " & ")}
@@ -233,13 +242,6 @@ export const CartDrawer: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    <button
-                      className={styles.removeBtn}
-                      onClick={() => removeFromCart(item.product.id)}
-                      aria-label={`Remove ${item.product.name}`}
-                    >
-                      Remove
-                    </button>
                   </div>
                 ))}
               </div>
@@ -263,17 +265,36 @@ export const CartDrawer: React.FC = () => {
             ) : (
               <>
                 <form onSubmit={handleApplyPromo} className={styles.promoForm}>
-                  <input
-                    type="text"
-                    placeholder="Discount code"
-                    value={promoInput}
-                    onChange={(e) => setPromoInput(e.target.value)}
-                    className={styles.promoInput}
-                  />
+                  <div className={styles.promoInputWrap}>
+                    <button type="button" className={styles.promoArrowBtn} onClick={() => setShowOffers(!showOffers)} aria-label="Show offers">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showOffers ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </button>
+                    <input
+                      type="text"
+                      placeholder="Discount code"
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value)}
+                      className={styles.promoInput}
+                    />
+                  </div>
                   <button type="submit" className={styles.promoBtn}>
                     Apply
                   </button>
                 </form>
+                {showOffers && (
+                  <div className={styles.offersPanel}>
+                    <p className={styles.offersTitle}>Available Offers</p>
+                    {promoCodes.filter(p => new Date(p.endDate || "") > new Date() || p.isForever).map(p => (
+                      <div key={p.code} className={styles.offerItem} onClick={() => { setPromoInput(p.code); setShowOffers(false); }}>
+                        <span className={styles.offerCode}>{p.code}</span>
+                        <span className={styles.offerDesc}>{p.type === "flat" ? `₹${p.value} OFF` : `${p.value}% OFF`}</span>
+                      </div>
+                    ))}
+                    {promoCodes.filter(p => new Date(p.endDate || "") > new Date() || p.isForever).length === 0 && (
+                      <p className={styles.offerEmpty}>No offers available</p>
+                    )}
+                  </div>
+                )}
                 {promoError && <p className={styles.promoError}>{promoError}</p>}
               </>
             )}

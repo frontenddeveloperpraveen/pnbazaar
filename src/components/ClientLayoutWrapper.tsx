@@ -14,6 +14,7 @@ export default function ClientLayoutWrapper({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
+  const isCheckout = pathname?.startsWith("/checkout");
   
   const pathnameRef = useRef(pathname);
   const startTimeRef = useRef(Date.now());
@@ -135,10 +136,10 @@ export default function ClientLayoutWrapper({
         <Header />
       </Suspense>
       <CartDrawer />
-      <main style={{ marginTop: "110px", minHeight: "calc(100vh - 110px - 380px)", display: "flex", flexDirection: "column" }}>
+      <main className="main-content" style={{ marginTop: isCheckout ? "0" : "110px", minHeight: isCheckout ? "100vh" : "calc(100vh - 110px - 380px)", display: "flex", flexDirection: "column" }}>
         {children}
       </main>
-      <Footer />
+      {!isCheckout && <Footer />}
     </>
   );
 }

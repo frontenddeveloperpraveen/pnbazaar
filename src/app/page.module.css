@@ -378,13 +378,12 @@
   }
 }
 
-@media (max-width: 600px) {
-  .heroTitle {
-    font-size: 36px;
-  }
+@media (max-width: 768px) {
   .hero {
-    min-height: 60vh;
-    padding: 60px 16px;
+    display: none !important;
+  }
+  .badgesSection {
+    display: none !important;
   }
   .productsGrid {
     grid-template-columns: 1fr;
@@ -395,4 +394,19 @@
   .categoryCard {
     height: 300px;
   }
+  .sectionTitle {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  .sectionDesc {
+    font-size: 13px;
+  }
+
+  /* Reorder: products first, then categories, then promo */
+  .homeHero { display: none !important; }
+  .categoryProductsSection { order: 1; }
+  .featuredSection { order: 2; }
+  .hotSection { order: 3; }
+  .collectionSection { order: 4; }
+  .promoBanner { order: 5; }
 }

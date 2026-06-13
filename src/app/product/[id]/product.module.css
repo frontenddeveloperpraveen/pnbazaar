@@ -2,7 +2,7 @@
   max-width: 1300px;
   width: 100%;
   margin: 0 auto;
-  padding: 40px 24px 100px;
+  padding: 24px 24px 60px;
   animation: fadeIn var(--transition-normal) forwards;
 }
 
@@ -10,7 +10,7 @@
 .breadcrumbs {
   font-size: 14px;
   color: var(--text-muted);
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .breadcrumbs a:hover {
@@ -23,11 +23,37 @@
 }
 
 /* Main Grid Layout */
+.productMain {
+  margin-bottom: 40px;
+}
+
 .mainGrid {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   gap: 60px;
-  margin-bottom: 80px;
+}
+
+/* Accordions */
+.accordions {
+  margin-top: 36px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Desktop: productMain as 2-column grid, accordions in right column */
+@media (min-width: 1025px) {
+  .productMain {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 60px;
+  }
+  .mainGrid {
+    display: contents;
+  }
+  .accordions {
+    grid-column: 2;
+    margin-top: 0;
+    border-top: none;
+  }
 }
 
 /* Left Image section */
@@ -137,7 +163,14 @@
   font-size: 16px;
   color: var(--text-muted);
   line-height: 1.6;
-  margin-bottom: 30px;
+  margin-bottom: 16px;
+}
+
+.boughtText {
+  font-size: 14px;
+  color: #059669;
+  font-weight: 600;
+  margin-bottom: 16px;
 }
 
 .divider {
@@ -258,7 +291,7 @@
 .tabsSection {
   border-top: 1px solid var(--border-color);
   padding-top: 40px;
-  margin-bottom: 80px;
+  margin-bottom: 40px;
 }
 
 .tabs {
@@ -326,7 +359,7 @@
 
 /* Related section */
 .related {
-  margin-top: 60px;
+  margin-top: 40px;
 }
 
 .relatedTitle {
@@ -369,6 +402,148 @@
   font-weight: 600;
 }
 
+/* Arrow Buttons */
+.arrowBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.85);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  z-index: 2;
+}
+
+.arrowBtn:first-of-type { left: 8px; }
+.arrowBtn:last-of-type { right: 8px; }
+
+.arrowIcon {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1c1d;
+  line-height: 1;
+}
+
+/* Mobile Sticky Bottom Bar */
+.mobileStickyBar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px 16px 80px;
+  }
+  .breadcrumbs {
+    font-size: 12px;
+    margin-bottom: 12px;
+    white-space: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .title {
+    font-size: 22px;
+  }
+  .price {
+    font-size: 24px;
+    margin-bottom: 16px;
+  }
+  .shortDesc {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .mainGrid {
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  .tabsSection {
+    padding-top: 24px;
+    margin-bottom: 24px;
+  }
+  .accordions {
+    display: block;
+  }
+  .mobileStickyBar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid var(--border-color);
+    padding: 10px 12px;
+    gap: 8px;
+    z-index: 999;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.06);
+    align-items: center;
+  }
+  .stickyQuantity {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 100px;
+    padding: 2px;
+    background: var(--bg-surface);
+    flex-shrink: 0;
+  }
+  .stickyQtyBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .stickyQtyVal {
+    width: 28px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .stickyCartBtn {
+    flex: 1;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 100px;
+    padding: 12px 0;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .stickyBuyBtn {
+    flex: 1;
+    background: #fff;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: 100px;
+    padding: 10px 0;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .container {
+    padding-bottom: 80px;
+  }
+  .actionRow {
+    display: none;
+  }
+  .arrowBtn:active {
+    background: rgba(255,255,255,0.85) !important;
+    transform: translateY(-50%) !important;
+  }
+}
+
 @media (max-width: 1024px) {
   .mainGrid {
     grid-template-columns: 1fr;
@@ -380,15 +555,6 @@
   }
   .relatedGrid {
     grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .title {
-    font-size: 32px;
-  }
-  .price {
-    font-size: 26px;
   }
 }
 

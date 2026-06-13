@@ -63,7 +63,7 @@ interface CartContextType {
   addPromoCode: (promo: PromoCode) => Promise<void>;
   deletePromoCode: (code: string) => Promise<void>;
   updatePromoCode: (promo: PromoCode) => Promise<void>;
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number, suppressDrawer?: boolean) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -322,7 +322,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Cart operations (uses product.salePrice if available for promotional markdowns)
-  const addToCart = (product: Product, quantity = 1) => {
+  const addToCart = (product: Product, quantity = 1, suppressDrawer = false) => {
     const existingIndex = cart.findIndex(item => item.product.id === product.id);
     if (existingIndex > -1) {
       const newCart = [...cart];
@@ -331,7 +331,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       saveCart([...cart, { product, quantity }]);
     }
-    setCartDrawerOpen(true);
+    if (!suppressDrawer) setCartDrawerOpen(true);
     trackEvent("click", typeof window !== "undefined" ? window.location.pathname : "/cart", `Add to Cart: ${product.name} (Qty: ${quantity})`);
   };
 

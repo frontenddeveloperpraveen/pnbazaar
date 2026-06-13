@@ -89,7 +89,7 @@ export default function CartClient() {
               {/* Product details */}
               <div className={styles.itemInfo}>
                 <Link href={`/product/${item.product.slug}`} className={styles.itemName}>
-                  {item.product.name}
+                  {item.product.name.length > 30 ? item.product.name.slice(0, 30) + "…" : item.product.name}
                 </Link>
                 <span className={styles.itemCategory}>{item.product.category.replace("-", " & ")}</span>
                 <span className={styles.itemPrice}>₹{item.product.price.toLocaleString("en-IN")} each</span>

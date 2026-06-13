@@ -252,6 +252,7 @@ function AdminPageContent() {
   const [prodMessage, setProdMessage] = useState("");
   const [size, setSize] = useState("");
   const [material, setMaterial] = useState("");
+  const [prodBoughtText, setProdBoughtText] = useState("");
   const [gst, setGst] = useState("");
   const [hsnCode, setHsnCode] = useState("");
   const [netWeight, setNetWeight] = useState("");
@@ -635,6 +636,7 @@ function AdminPageContent() {
     setWattage(item.wattage || "N/A");
     setProductUnit(item.productUnit || "cm");
     setProductWeightUnit(item.productWeightUnit || "kg");
+    setProdBoughtText(item.boughtText || "");
     setEditingProductId(item.id);
     setShowAddForm("single");
     setOpenMenuId(null);
@@ -742,7 +744,8 @@ function AdminPageContent() {
       deliveryType: deliveryType as any,
       deliveryMinOrder: deliveryMinOrder ? Number(deliveryMinOrder) : undefined,
       deliveryFee: deliveryFee ? Number(deliveryFee) : undefined,
-      status
+      status,
+      boughtText: prodBoughtText || undefined
     };
 
     setProdSaving(true);
@@ -1500,6 +1503,10 @@ function AdminPageContent() {
                         <div className={styles.formRow}>
                           <label>Features (one per line)</label>
                           <textarea rows={4} placeholder="Feature 1&#10;Feature 2&#10;Feature 3" value={prodFeatures} onChange={(e) => setProdFeatures(e.target.value)} />
+                        </div>
+                        <div className={styles.formRow}>
+                          <label>Bought Text (e.g. "10+ bought this week")</label>
+                          <input type="text" placeholder="e.g. 10+ bought in last month" value={prodBoughtText} onChange={(e) => setProdBoughtText(e.target.value)} />
                         </div>
                       </div>
 

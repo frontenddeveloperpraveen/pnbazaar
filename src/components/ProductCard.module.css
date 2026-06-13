@@ -80,6 +80,13 @@
   color: var(--text-muted);
 }
 
+.boughtRow {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 600;
+  margin: 4px 0 8px;
+}
+
 .footerRow {
   display: flex;
   align-items: center;

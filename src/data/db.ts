@@ -76,6 +76,7 @@ export interface Product {
 
   // Draft / Publish status
   status?: 'draft' | 'published';
+  boughtText?: string;
 }
 
 export interface Category {

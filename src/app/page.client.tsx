@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CATEGORIES, type Product } from "../data/db";
 import ProductCard from "../components/ProductCard";
 import { useCart } from "../context/CartContext";
@@ -9,7 +10,9 @@ import styles from "./page.module.css";
 import { trackEvent } from "../lib/tracker";
 
 export default function HomePageClient() {
+  const router = useRouter();
   const { products } = useCart();
+  const [searchQuery, setSearchQuery] = useState("");
   const publishedProducts = products.filter((p) => p.status !== "draft");
   const featuredProducts = publishedProducts.filter((p) => p.isFeatured);
   const hotProducts = publishedProducts.filter((p) => p.isHot);
@@ -26,10 +29,17 @@ export default function HomePageClient() {
     trackEvent("pageview", "/");
   }, []);
 
+  const handleMobileSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
     <div className={styles.home}>
       {/* Hero Banner Section */}
-      <section className={styles.hero}>
+      <section className={`${styles.hero} ${styles.homeHero}`}>
         <div className={styles.heroOverlay}></div>
         <div className={styles.heroContent}>
           <span className={styles.heroTag}>Everyday Essentials</span>
@@ -127,7 +137,7 @@ export default function HomePageClient() {
       </section>
 
       {/* Categories Grid */}
-      <section className={styles.section}>
+      <section className={`${styles.section} ${styles.collectionSection}`}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Shop by Collection</h2>
           <p className={styles.sectionDesc}>Explore our seasonal lines designed to simplify and elevate your routine.</p>
@@ -166,7 +176,7 @@ export default function HomePageClient() {
 
       {/* Products by Category */}
       {CATEGORIES.filter(c => byCategory.has(c.slug)).map(cat => (
-        <section key={cat.slug} className={styles.section}>
+        <section key={cat.slug} className={`${styles.section} ${styles.categoryProductsSection}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>{cat.name}</h2>
             <p className={styles.sectionDesc}>{cat.description}</p>
@@ -180,30 +190,34 @@ export default function HomePageClient() {
       ))}
 
       {/* Featured Products */}
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Featured Masterpieces</h2>
-          <p className={styles.sectionDesc}>Explore our current season favorites and top-tier arrivals.</p>
-        </div>
-        <div className={styles.productsGrid}>
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
+      {featuredProducts.length > 0 && (
+        <section className={`${styles.section} ${styles.featuredSection}`}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Featured Masterpieces</h2>
+            <p className={styles.sectionDesc}>Explore our current season favorites and top-tier arrivals.</p>
+          </div>
+          <div className={styles.productsGrid}>
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Hot Products */}
-      <section className={`${styles.section} ${styles.sectionAlt}`}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Trending & Hot Sellers</h2>
-          <p className={styles.sectionDesc}>Items that are selling fast. Grab yours before they go out of stock.</p>
-        </div>
-        <div className={styles.productsGrid}>
-          {hotProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
+      {hotProducts.length > 0 && (
+        <section className={`${styles.section} ${styles.sectionAlt} ${styles.hotSection}`}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Trending & Hot Sellers</h2>
+            <p className={styles.sectionDesc}>Items that are selling fast. Grab yours before they go out of stock.</p>
+          </div>
+          <div className={styles.productsGrid}>
+            {hotProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

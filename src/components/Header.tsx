@@ -16,6 +16,7 @@ export const Header: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isCheckout = pathname.startsWith("/checkout/");
   
   // Suggestions states
   const [suggestions, setSuggestions] = useState<Product[]>([]);
@@ -92,17 +93,17 @@ export const Header: React.FC = () => {
   return (
     <>
       {/* Shopify-style Announcement Bar */}
-      <div className={styles.announcementBar}>
+      <div className={`${styles.announcementBar} ${isScrolled ? styles.announcementHidden : ""} ${isCheckout ? styles.checkoutHide : ""}`}>
         <p className={styles.announcementText}>
           Free shipping on orders • Easy 7-day returns
         </p>
       </div>
 
-      <header className={`${styles.header} ${isScrolled ? styles.scrolled : ""} ${mobileMenuOpen ? styles.menuOpen : ""}`}>
+      <header className={`${styles.header} ${isScrolled ? styles.scrolled : ""} ${mobileMenuOpen ? styles.menuOpen : ""} ${isCheckout ? styles.checkoutHeader : ""}`}>
         <div className={styles.container}>
           {/* Hamburger Menu Toggle (Mobile) */}
           <button 
-            className={styles.hamburger} 
+            className={`${styles.hamburger} ${isCheckout ? styles.checkoutHide : ""}`} 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle Navigation Menu"
             aria-expanded={mobileMenuOpen}
@@ -142,57 +143,8 @@ export const Header: React.FC = () => {
             <Link href="/orders" className={styles.navLink}>My Orders</Link>
           </nav>
 
-          {/* Search & Actions */}
-          <div className={styles.actions}>
-            <div className={styles.searchContainer} ref={searchContainerRef}>
-              <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setShowSuggestions(true);
-                  }}
-                  onFocus={() => setShowSuggestions(true)}
-                  className={styles.searchInput}
-                  id="header-search-input"
-                  autoComplete="off"
-                />
-                <button type="submit" className={styles.searchButton} aria-label="Search">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={styles.searchIcon}>
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                </button>
-              </form>
-
-              {/* Instant Search Suggestions Dropdown */}
-              {showSuggestions && suggestions.length > 0 && (
-                <div className={styles.suggestionsDropdown}>
-                  {suggestions.map((product) => (
-                    <div
-                      key={product.id}
-                      className={styles.suggestionItem}
-                      onClick={() => selectSuggestion(product.slug)}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={product.image || product.images?.[0]}
-                        alt={product.name}
-                        className={styles.suggestionImg}
-                      />
-                      <div className={styles.suggestionInfo}>
-                        <span className={styles.suggestionName}>{product.name}</span>
-                        <span className={styles.suggestionPrice}>₹{product.price.toLocaleString("en-IN")}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Cart Trigger */}
+          {/* Cart Trigger (desktop) */}
+          <div className={`${styles.actions} ${isCheckout ? styles.checkoutHide : ""}`}>
             <button onClick={handleCartClick} className={styles.cartBtn} aria-label="Shopping Cart">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.cartIcon}>
                 <circle cx="9" cy="21" r="1"></circle>
@@ -204,6 +156,63 @@ export const Header: React.FC = () => {
               )}
             </button>
           </div>
+
+          {isCheckout && (
+            <Link href="/cart" className={styles.checkoutCancel}>
+              Cancel
+            </Link>
+          )}
+
+          {/* Search — hidden on product detail pages */}
+          {!pathname.startsWith("/product/") && !isCheckout && (
+          <div className={styles.searchContainer} ref={searchContainerRef}>
+            <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                className={styles.searchInput}
+                id="header-search-input"
+                autoComplete="off"
+              />
+              <button type="submit" className={styles.searchButton} aria-label="Search">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={styles.searchIcon}>
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
+            </form>
+
+            {/* Instant Search Suggestions Dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className={styles.suggestionsDropdown}>
+                {suggestions.map((product) => (
+                  <div
+                    key={product.id}
+                    className={styles.suggestionItem}
+                    onClick={() => selectSuggestion(product.slug)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={product.image || product.images?.[0]}
+                      alt={product.name}
+                      className={styles.suggestionImg}
+                    />
+                    <div className={styles.suggestionInfo}>
+                      <span className={styles.suggestionName}>{product.name}</span>
+                      <span className={styles.suggestionPrice}>₹{product.price.toLocaleString("en-IN")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          )}
         </div>
       </header>
     </>

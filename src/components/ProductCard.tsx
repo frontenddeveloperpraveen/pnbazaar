@@ -57,6 +57,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <span className={styles.reviews}>({product.reviewsCount})</span>
           </div>
 
+          {product.boughtText && (
+            <div className={styles.boughtRow}>{product.boughtText}</div>
+          )}
+
           <div className={styles.footerRow}>
             <div className={styles.priceContainer}>
               <span className={styles.price}>₹{product.price.toLocaleString("en-IN")}</span>
