@@ -4,19 +4,23 @@ import { getDatabase } from "../../../../lib/mongodb";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sessionId, reason, orderId } = body;
+    const { orderId, reason } = body;
 
     const db = await getDatabase();
-    const collection = db.collection("cancelled_payments");
 
-    const logEntry = {
-      sessionId,
+    if (orderId) {
+      await db.collection("orders").updateOne(
+        { id: orderId },
+        { $set: { razorpayStatus: "cancelled", status: "Cancelled" } }
+      );
+    }
+
+    const collection = db.collection("cancelled_payments");
+    await collection.insertOne({
       orderId,
       reason: reason || "Payment modal closed by user",
       cancelledAt: new Date().toISOString(),
-    };
-
-    await collection.insertOne(logEntry);
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

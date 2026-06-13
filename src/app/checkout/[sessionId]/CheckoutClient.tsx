@@ -39,7 +39,7 @@ const STORAGE_KEY = "saved_addresses";
 
 export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
   const router = useRouter();
-  const { checkout, setCartDrawerOpen } = useCart();
+  const { setCartDrawerOpen, clearCart } = useCart();
 
   const [session, setSession] = useState<CheckoutSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -311,11 +311,22 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
     setShowAddressForm(false);
     setEditingAddressId(null);
     setStep("payment");
-    clearAddressForm();
   };
 
   const handleSelectAddress = (id: string) => {
     setSelectedAddressId(id);
+    const addr = savedAddresses.find(a => a.id === id);
+    if (addr) {
+      setBillingName(addr.name);
+      setBillingEmail(addr.email);
+      setBillingPhone(addr.phone);
+      setBillingAddressLine1(addr.line1);
+      setBillingAddressLine2(addr.line2);
+      setBillingLandmark(addr.landmark);
+      setBillingState(addr.state);
+      setBillingCity(addr.city);
+      setBillingPincode(addr.pincode);
+    }
   };
 
   const handleEditAddress = (addr: SavedAddress) => {
@@ -356,19 +367,32 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
     setBillingPincode("");
   };
 
-  const validate = () => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const addr = selectedAddress;
+    const name = addr ? addr.name : billingName;
+    const email = addr ? addr.email : billingEmail;
+    const phone = addr ? addr.phone : billingPhone;
+    const line1 = addr ? addr.line1 : billingAddressLine1;
+    const line2 = addr ? addr.line2 : billingAddressLine2;
+    const landmark = addr ? addr.landmark : billingLandmark;
+    const state = addr ? addr.state : billingState;
+    const city = addr ? addr.city : billingCity;
+    const pincode = addr ? addr.pincode : billingPincode;
+
     const errs: Record<string, string> = {};
-    if (!billingName.trim()) errs.billingName = "Name is required";
-    if (!billingEmail.trim()) errs.billingEmail = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail))
+    if (!name.trim()) errs.billingName = "Name is required";
+    if (!email.trim()) errs.billingEmail = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errs.billingEmail = "Invalid email";
-    if (billingPhone && !/^\d{10}$/.test(billingPhone))
+    if (phone && !/^\d{10}$/.test(phone))
       errs.billingPhone = "Invalid phone number";
-    if (!billingAddressLine1.trim())
+    if (!line1.trim())
       errs.billingAddress = "Address Line 1 is required";
-    if (!billingState) errs.billingState = "State is required";
-    if (!billingCity) errs.billingCity = "City is required";
-    if (!billingPincode.trim()) errs.billingPincode = "Pincode is required";
+    if (!state) errs.billingState = "State is required";
+    if (!city) errs.billingCity = "City is required";
+    if (!pincode.trim()) errs.billingPincode = "Pincode is required";
     if (!sameAsBilling) {
       if (!shippingName.trim()) errs.shippingName = "Name is required";
       if (!shippingAddressLine1.trim())
@@ -378,226 +402,141 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
       if (!shippingPincode.trim()) errs.shippingPincode = "Pincode is required";
     }
     setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
+    if (Object.keys(errs).length > 0) {
+      setErrors(prev => ({ ...prev, form: "Please fix the highlighted fields and try again." }));
+      return;
+    }
 
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
     const currentSession = session;
     if (!currentSession) return;
     setSubmitting(true);
 
-    const billingFull = buildAddress(
-      billingAddressLine1,
-      billingAddressLine2,
-      billingLandmark,
-      billingCity,
-      billingState,
-      billingPincode,
-    );
-    const shipName = sameAsBilling ? billingName : shippingName;
+    const billingFull = buildAddress(line1, line2, landmark, city, state, pincode);
+    const shipName = sameAsBilling ? name : shippingName;
     const shipFull = sameAsBilling
       ? billingFull
-      : buildAddress(
-          shippingAddressLine1,
-          shippingAddressLine2,
-          shippingLandmark,
-          shippingCity,
-          shippingState,
-          shippingPincode,
-        );
-    const shipState = sameAsBilling ? billingState : shippingState;
-    const shipPin = sameAsBilling ? billingPincode : shippingPincode;
+      : buildAddress(shippingAddressLine1, shippingAddressLine2, shippingLandmark, shippingCity, shippingState, shippingPincode);
+    const shipState = sameAsBilling ? state : shippingState;
+    const shipPin = sameAsBilling ? pincode : shippingPincode;
 
-    if (paymentMethod === "COD") {
-      const result = await checkout({
-        name: billingName,
-        email: billingEmail,
-        address: billingFull,
-        state: billingState,
-        pincode: billingPincode,
-        phone: billingPhone,
-        lat: lat ?? undefined,
-        lng: lng ?? undefined,
-        billingAddress: billingFull,
-        billingState,
-        billingPincode,
-        shippingName: shipName,
-        shippingAddress: shipFull,
-        shippingState: shipState,
-        shippingPincode: shipPin,
-        paymentMethod: "COD",
-        giftWrap: giftWrap || undefined,
-        giftNote: giftNote.trim() || undefined,
-        addressLine1: billingAddressLine1,
-        addressLine2: billingAddressLine2,
-        landmark: billingLandmark,
-        city: billingCity,
+    const customerInfo = {
+      name, email, phone,
+      address: billingFull,
+      billingAddress: billingFull,
+      billingState: state,
+      billingCity: city,
+      billingPincode: pincode,
+      billingAddressLine1: line1,
+      billingAddressLine2: line2,
+      billingLandmark: landmark,
+      shippingName: shipName,
+      shippingAddress: shipFull,
+      shippingState: shipState,
+      shippingCity: sameAsBilling ? city : shippingCity,
+      shippingPincode: shipPin,
+      shippingAddressLine1: sameAsBilling ? line1 : shippingAddressLine1,
+      shippingAddressLine2: sameAsBilling ? line2 : shippingAddressLine2,
+      shippingLandmark: sameAsBilling ? landmark : shippingLandmark,
+      paymentMethod: paymentMethod === "ONLINE" ? "Online (Razorpay)" : "COD",
+    };
+
+    try {
+      const checkoutRes = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerInfo,
+          items: currentSession.cart,
+          total,
+          paymentMethod,
+          appliedCoupon: currentSession.discountCode || undefined,
+          giftWrap: giftWrap || undefined,
+          giftNote: giftNote.trim() || undefined,
+        }),
       });
 
-      if (result) {
+      const checkoutData = await checkoutRes.json();
+
+      if (!checkoutRes.ok || !checkoutData.success) {
+        setErrors({ form: checkoutData.error || "Failed to place order. Please try again." });
+        setSubmitting(false);
+        return;
+      }
+
+      if (paymentMethod === "COD") {
         try {
+          clearCart();
           localStorage.removeItem("checkout_" + sessionId);
-          await fetch(
-            "/api/abandoned-checkouts?sessionId=" +
-              encodeURIComponent(sessionId),
-            { method: "DELETE" },
-          );
+          await fetch("/api/abandoned-checkouts?sessionId=" + encodeURIComponent(sessionId), { method: "DELETE" });
         } catch {}
         router.push("/orders?success=true");
-      } else {
-        setErrors({ form: "Failed to place order. Please try again." });
-        setSubmitting(false);
+        return;
       }
-    } else {
-      let generatedOrderId = "";
-      try {
-        const res = await fetch("/api/razorpay", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: total }),
-        });
-        const data = await res.json();
 
-        if (!res.ok || !data.success) {
-          setErrors({
-            form:
-              data.error ||
-              "Failed to initialize payment gateway. Please try again or use COD.",
-          });
-          setSubmitting(false);
-          return;
-        }
+      const rzpOrderId = checkoutData.razorpay.orderId;
+      const dbOrderId = checkoutData.order.id;
 
-        generatedOrderId = data.orderId;
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_pnbazaarKey123",
+        amount: checkoutData.razorpay.amount,
+        currency: checkoutData.razorpay.currency,
+        name: "PN Bazaar",
+        description: "Order Payment",
+        image: "/logo.png",
+        order_id: rzpOrderId,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch("/api/razorpay/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orderId: dbOrderId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json();
 
-        const options = {
-          key:
-            process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-            "rzp_test_pnbazaarKey123",
-          amount: data.amount,
-          currency: data.currency,
-          name: "PN Bazaar",
-          description: "Order Payment",
-          image: "/logo.png",
-          order_id: data.orderId,
-          handler: async function (response: any) {
-            try {
-              const orderPayload = {
-                items: currentSession.cart,
-                total: total,
-                customerInfo: {
-                  name: billingName,
-                  email: billingEmail,
-                  phone: billingPhone,
-                  address: billingFull,
-                  billingAddress: billingFull,
-                  billingState,
-                  billingCity,
-                  billingPincode,
-                  billingAddressLine1,
-                  billingAddressLine2,
-                  billingLandmark,
-                  shippingName: shipName,
-                  shippingAddress: shipFull,
-                  shippingState: shipState,
-                  shippingCity: sameAsBilling ? billingCity : shippingCity,
-                  shippingPincode: shipPin,
-                  shippingAddressLine1: sameAsBilling
-                    ? billingAddressLine1
-                    : shippingAddressLine1,
-                  shippingAddressLine2: sameAsBilling
-                    ? billingAddressLine2
-                    : shippingAddressLine2,
-                  shippingLandmark: sameAsBilling
-                    ? billingLandmark
-                    : shippingLandmark,
-                  paymentMethod: "Online (Razorpay)",
-                  giftWrap: giftWrap || undefined,
-                  giftNote: giftNote.trim() || undefined,
-                },
-                appliedCoupon: currentSession.discountCode || undefined,
-                cashbackApplied: undefined,
-                defaultOrdered: true,
-              };
-
-              const verifyRes = await fetch("/api/razorpay/verify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  orderPayload,
-                }),
-              });
-              const verifyData = await verifyRes.json();
-
-              if (verifyRes.ok && verifyData.success) {
-                localStorage.removeItem("pn_cart");
-                localStorage.removeItem("checkout_" + sessionId);
-                await fetch(
-                  "/api/abandoned-checkouts?sessionId=" +
-                    encodeURIComponent(sessionId),
-                  { method: "DELETE" },
-                );
-                router.push("/orders?success=true");
-              } else {
-                setErrors({
-                  form:
-                    verifyData.error ||
-                    "Payment verification failed. Please contact PN Bazaar support.",
-                });
-                setSubmitting(false);
-              }
-            } catch (err: any) {
-              console.error("Verification callback error: ", err);
-              setErrors({
-                form: "An error occurred while validating payment.",
-              });
+            if (verifyRes.ok && verifyData.success) {
+              clearCart();
+              localStorage.removeItem("checkout_" + sessionId);
+              await fetch("/api/abandoned-checkouts?sessionId=" + encodeURIComponent(sessionId), { method: "DELETE" });
+              router.push("/orders?success=true");
+            } else {
+              setErrors({ form: verifyData.error || "Payment verification failed. Please contact PN Bazaar support." });
               setSubmitting(false);
             }
+          } catch (err: any) {
+            setErrors({ form: "An error occurred while validating payment." });
+            setSubmitting(false);
+          }
+        },
+        prefill: {
+          name: billingName,
+          email: billingEmail,
+          contact: billingPhone,
+        },
+        notes: { address: billingFull, sessionId },
+        theme: { color: "#121212" },
+        modal: {
+          ondismiss: async function () {
+            setSubmitting(false);
+            await fetch("/api/razorpay/cancel", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: dbOrderId, reason: "Payment modal closed by customer" }),
+            }).catch(() => {});
           },
-          prefill: {
-            name: billingName,
-            email: billingEmail,
-            contact: billingPhone,
-          },
-          notes: {
-            address: billingFull,
-            sessionId: sessionId,
-          },
-          theme: {
-            color: "#121212",
-          },
-          modal: {
-            ondismiss: async function () {
-              setSubmitting(false);
-              await fetch("/api/razorpay/cancel", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  sessionId,
-                  orderId: generatedOrderId,
-                  reason: "Razorpay payment modal closed by customer",
-                }),
-              }).catch(() => {});
-            },
-          },
-        };
+        },
+      };
 
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      } catch (err: any) {
-        console.error("Razorpay error: ", err);
-        setErrors({
-          form:
-            err.message ||
-            "An error occurred during Razorpay transaction initialization.",
-        });
-        setSubmitting(false);
-      }
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      console.error("Place order error:", err);
+      setErrors({ form: err.message || "An error occurred. Please try again." });
+      setSubmitting(false);
     }
   };
 

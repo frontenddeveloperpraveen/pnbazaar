@@ -37,6 +37,7 @@
   flex-direction: column;
   overflow-y: auto;
   min-height: 0;
+  max-height: 100%;
   padding-right: 8px;
 }
 
