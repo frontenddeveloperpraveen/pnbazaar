@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { getDatabase } from "../../../../lib/mongodb";
+import { sendOrderConfirmedEmail } from "../../../../lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -47,6 +48,34 @@ export async function POST(request: Request) {
 
     if (!result) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Send confirmation email (non-blocking)
+    try {
+      const order = result;
+      const payload = {
+        orderId: order.id,
+        customerName: order.customerInfo?.name || "Customer",
+        customerEmail: order.customerInfo?.email,
+        items: order.items || [],
+        subtotal: order.subtotal || order.total,
+        discount: order.discount || 0,
+        deliveryFee: order.deliveryFee || 0,
+        total: order.total,
+        shippingAddress: {
+          fullName: order.customerInfo?.shippingName || order.customerInfo?.name || "Customer",
+          addressLine: order.customerInfo?.shippingAddress || order.customerInfo?.address || "",
+          city: order.customerInfo?.shippingCity || "",
+          state: order.customerInfo?.shippingState || "",
+          pincode: order.customerInfo?.shippingPincode || "",
+          phone: order.customerInfo?.phone || "",
+        },
+        paymentMethod: "Online (Razorpay)",
+        date: order.date,
+      };
+      await sendOrderConfirmedEmail(payload);
+    } catch (mailErr) {
+      console.error("Failed to send ONLINE confirmation email:", mailErr);
     }
 
     return NextResponse.json({ success: true, order: result });

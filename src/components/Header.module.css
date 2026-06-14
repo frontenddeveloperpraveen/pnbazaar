@@ -172,8 +172,8 @@
   font-weight: 500;
 }
 
-.dropdown:hover .dropdownContent {
-  display: block;
+.dropdownVisible {
+  display: block !important;
 }
 
 .actions {
@@ -400,8 +400,8 @@
     display: none;
     animation: none;
   }
-  .dropdown:hover .dropdownContent {
-    display: block;
+  .dropdownVisible {
+    display: block !important;
   }
   .actions {
     flex: 1;

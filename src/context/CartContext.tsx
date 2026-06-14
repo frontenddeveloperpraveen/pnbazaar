@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '../data/db';
 import { trackEvent, getSessionId } from '../lib/tracker';
 import { useAuth } from './AuthContext';
+import { getVisitorId, upsertSession, SessionItem } from '../lib/session';
 
 export interface CartItem {
   product: Product;
@@ -178,14 +179,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchData();
   }, []);
 
-  // Auto-save abandoned cart when items sit in cart for 30s
+  // Auto-save session when cart changes (30s debounce)
   useEffect(() => {
     if (cart.length === 0) return;
     const timer = setTimeout(() => {
+      const visitorId = getVisitorId();
+      const items: SessionItem[] = cart.map(item => ({
+        productId: item.product.id || "",
+        name: item.product.name || "",
+        price: item.product.price || 0,
+        quantity: item.quantity,
+        image: item.product.image || item.product.images?.[0] || "",
+      }));
+      upsertSession({ visitorId, items, lat, lng, ipLocation });
+      // Also try to save to old abandoned-carts collection for backward compat
       saveAbandonedCart(user?.email, user?.name);
     }, 30000);
     return () => clearTimeout(timer);
-  }, [cart, user?.email, user?.name]);
+  }, [cart, user?.email, user?.name, lat, lng, ipLocation]);
 
   // Save cart helper
   const saveCart = (newCart: CartItem[]) => {

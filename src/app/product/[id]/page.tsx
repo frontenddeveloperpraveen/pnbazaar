@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PRODUCTS } from "../../../data/db";
+import { getDatabase } from "../../../lib/mongodb";
 import ProductDetailsClient from "./ProductDetailsClient";
 
 interface ProductPageProps {
@@ -8,7 +8,14 @@ interface ProductPageProps {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { id: slug } = await params;
-  const product = PRODUCTS.find((p) => p.slug === slug && p.status !== "draft");
+
+  let product: any = null;
+  try {
+    const db = await getDatabase();
+    product = await db.collection("products").findOne({ slug, status: { $ne: "draft" } });
+  } catch {
+    // fallback to static data
+  }
 
   if (!product) {
     return {
@@ -20,17 +27,17 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const title = product.seoMetaTitle || `${product.name} | PN Bazaar`;
   const description = product.seoMetaDescription || product.description;
   const ogDescription = "Pay online and get flat 10% off! Shop now at PN Bazaar.";
-  const mainImage = product.image;
+  const mainImage = product.image || product.images?.[0] || "";
 
   return {
     title,
     description,
-    keywords: product.seoKeywords ? product.seoKeywords.split(",").map(k => k.trim()) : product.tags || [],
+    keywords: product.seoKeywords ? product.seoKeywords.split(",").map((k: string) => k.trim()) : product.tags || [],
     openGraph: {
       title,
       description: ogDescription,
       type: "website",
-      url: `https://pnbazaar.com/product/${product.slug}`,
+      url: `https://pnbazaar.com/product/${slug}`,
       images: [
         {
           url: mainImage,

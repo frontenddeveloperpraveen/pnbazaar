@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
+import { getVisitorId, upsertSession, updateSession, SessionItem, SessionCheckoutData } from "../../../lib/session";
 import styles from "./checkout.module.css";
 
 interface CheckoutSession {
@@ -234,6 +235,8 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
   useEffect(() => {
     if (!session || abandonedSaved.current) return;
     abandonedSaved.current = true;
+
+    // Save to old abandoned-checkouts collection (backward compat)
     fetch("/api/abandoned-checkouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -255,11 +258,30 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
         ipLocation,
       }),
     }).catch(() => {});
+
+    // Save to unified sessions collection
+    const visitorId = getVisitorId();
+    const items: SessionItem[] = session.cart.map((item) => ({
+      productId: item.product?.id || item.product?._id || "",
+      name: item.product?.title || item.product?.name || "",
+      price: item.product?.price || 0,
+      quantity: item.quantity,
+      image: item.product?.images?.[0],
+    }));
+    upsertSession({
+      visitorId,
+      items,
+      checkoutData: { name: user?.name || "", email: user?.email || "" },
+      lat,
+      lng,
+      ipLocation,
+    });
   }, [session, sessionId, lat, lng, ipLocation, user?.name, user?.email]);
 
   useEffect(() => {
     if (!session) return;
     const timer = setTimeout(() => {
+      // Update old abandoned-checkouts collection (backward compat)
       fetch("/api/abandoned-checkouts", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -291,6 +313,34 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
           },
         }),
       }).catch(() => {});
+
+      // Update unified sessions collection
+      const visitorId = getVisitorId();
+      const checkoutData: SessionCheckoutData = {
+        name: user?.name || billingName,
+        email: user?.email || billingEmail,
+        phone: billingPhone,
+        billingName: user?.name || billingName,
+        billingEmail: user?.email || billingEmail,
+        billingPhone,
+        billingAddressLine1,
+        billingAddressLine2,
+        billingLandmark,
+        billingState,
+        billingCity,
+        billingPincode,
+        shippingName,
+        shippingAddressLine1,
+        shippingAddressLine2,
+        shippingLandmark,
+        shippingState,
+        shippingCity,
+        shippingPincode,
+        sameAsBilling,
+        giftWrap,
+        giftNote,
+      };
+      updateSession(visitorId, { checkoutData });
     }, 1000);
     return () => clearTimeout(timer);
   }, [
@@ -603,6 +653,8 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
         body: JSON.stringify({
           customerInfo,
           items: currentSession.cart,
+          subtotal: currentSession.subtotal,
+          shippingFee: currentSession.shippingFee,
           total,
           paymentMethod,
           appliedCoupon: currentSession.discountCode || undefined,

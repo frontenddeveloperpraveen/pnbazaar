@@ -257,6 +257,23 @@ const getEstimatedDelivery = (orderDate: string) => {
   });
 };
 
+// Helper: Format ISO date for display
+const formatOrderDate = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
 // Interface order models
 export interface OrderEmailPayload {
   orderId: string;
@@ -294,7 +311,7 @@ export async function sendOrderConfirmedEmail(order: OrderEmailPayload) {
       <p style="color: #4a5568; font-size: 15px;">We have received your order and are preparing it for shipment. Below is your order details summary. Your estimated delivery date is <strong>${estDelivery}</strong>.</p>
       
       <div class="section-title">Order Details</div>
-      <p style="font-size: 13px; color: #718096; margin-bottom: 20px;">Order Reference: <strong>#${order.orderId}</strong> | Date: ${new Date(order.date).toLocaleString("en-IN")}</p>
+      <p style="font-size: 13px; color: #718096; margin-bottom: 20px;">Order Reference: <strong>#${order.orderId}</strong> | Date: ${formatOrderDate(order.date)}</p>
       
       <table class="product-table">
         <thead>
@@ -313,11 +330,10 @@ export async function sendOrderConfirmedEmail(order: OrderEmailPayload) {
           <td>Subtotal:</td>
           <td style="text-align: right; font-weight: 500;">${formatPrice(order.subtotal)}</td>
         </tr>
-        ${
-          order.discount > 0
-            ? `<tr><td>Discount:</td><td style="text-align: right; font-weight: 500; color: #e53e3e;">-${formatPrice(order.discount)}</td></tr>`
-            : ""
-        }
+        <tr>
+          <td>Discount:</td>
+          <td style="text-align: right; font-weight: 500; ${order.discount > 0 ? "color: #e53e3e;" : "color: #999;"}">${order.discount > 0 ? "-" : ""}${formatPrice(order.discount)}</td>
+        </tr>
         <tr>
           <td>Delivery:</td>
           <td style="text-align: right; font-weight: 500;">${order.deliveryFee === 0 ? "FREE" : formatPrice(order.deliveryFee)}</td>
@@ -455,10 +471,10 @@ export async function sendOrderCancelledEmail(order: OrderEmailPayload) {
         cid: 'pnbazaar-logo'
       }
     ]
-  });
+  }  );
 }
 
-// Send OTP Email
+// 4. Send OTP Email
 export async function sendOtpEmail(email: string, otp: string, name: string) {
   const html = getEmailWrapper(
     "Your OTP for Login - PN Bazaar",
@@ -492,7 +508,75 @@ export async function sendOtpEmail(email: string, otp: string, name: string) {
   });
 }
 
-// 4. Send Order Delivered Email
+// 5. Send Abandoned Cart/Checkout Email
+export async function sendAbandonedEmail(
+  email: string,
+  name: string,
+  type: "cart" | "checkout",
+  items: any[],
+  total: number
+) {
+  const productsHtml = getProductRows(items);
+  const subject = type === "checkout"
+    ? "Complete Your Purchase - PN Bazaar"
+    : "You Left Something Behind - PN Bazaar";
+
+  const bodyText = type === "checkout"
+    ? "We noticed you didn't complete your payment. Your items are still reserved — finish your order now before they run out!"
+    : "You have items waiting in your cart. Come back and complete your purchase!";
+
+  const html = getEmailWrapper(
+    subject,
+    `
+      <div class="badge badge-warning">${type === "checkout" ? "Payment Pending" : "Items Waiting"}</div>
+      <h2 style="margin-top: 0; color: #1a1a1a;">Hey ${name}, don't miss out!</h2>
+      <p style="color: #4a5568; font-size: 15px;">${bodyText}</p>
+      
+      <div class="section-title">Items in your ${type === "checkout" ? "order" : "cart"}</div>
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th colspan="2">Item Description</th>
+            <th style="text-align: right;">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${productsHtml}
+        </tbody>
+      </table>
+      
+      <table class="summary-table">
+        <tr class="summary-total">
+          <td><strong>Total:</strong></td>
+          <td style="text-align: right;"><strong>${formatPrice(total)}</strong></td>
+        </tr>
+      </table>
+      
+      <div style="text-align: center; margin-top: 30px;">
+        <a href="https://pnbazaar.shop/cart" class="button" style="color: white !important;">Return to Cart</a>
+      </div>
+      <p style="text-align: center; font-size: 12px; color: #999; margin-top: 16px;">
+        You received this email because you visited PN Bazaar. If you have already completed your purchase, please ignore this email.
+      </p>
+    `
+  );
+
+  await transporter.sendMail({
+    from: `"PN Bazaar" <noreply@pnbazaar.shop>`,
+    to: email,
+    subject,
+    html,
+    attachments: [
+      {
+        filename: 'logo.png',
+        path: './public/logo.png',
+        cid: 'pnbazaar-logo'
+      }
+    ]
+  });
+}
+
+// 6. Send Order Delivered Email
 export async function sendOrderDeliveredEmail(order: OrderEmailPayload) {
   const productsHtml = getProductRows(order.items);
 

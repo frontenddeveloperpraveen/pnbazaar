@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { CATEGORIES, Product } from "../../../data/db";
 import ProductCard from "../../../components/ProductCard";
@@ -16,21 +16,31 @@ export default function CategoryClient({ slug }: CategoryClientProps) {
   const category = CATEGORIES.find((c) => c.slug === slug);
   const rawProducts = allProducts.filter((p) => p.category === slug && p.status !== "draft");
 
-  // Filtering states
+  // Filtering states — reset when slug changes
   const maxProductPrice = rawProducts.length > 0 ? Math.max(...rawProducts.map((p) => p.price)) : 10000;
   const [products, setProducts] = useState<Product[]>(rawProducts);
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(maxProductPrice);
   const [sortBy, setSortBy] = useState<string>("default");
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const slugRef = useRef(slug);
+
+  // Reset filters when navigating to a different category
+  useEffect(() => {
+    if (slugRef.current !== slug) {
+      slugRef.current = slug;
+      setMinPrice(0);
+      setMaxPrice(maxProductPrice);
+      setSortBy("default");
+      setProducts(rawProducts);
+    }
+  }, [slug, rawProducts, maxProductPrice]);
 
   useEffect(() => {
     let filtered = [...rawProducts];
 
-    // Price Filter
     filtered = filtered.filter((p) => p.price >= minPrice && p.price <= maxPrice);
 
-    // Sort Filter
     if (sortBy === "price-low") {
       filtered.sort((a, b) => a.price - b.price);
     } else if (sortBy === "price-high") {
@@ -40,7 +50,7 @@ export default function CategoryClient({ slug }: CategoryClientProps) {
     }
 
     setProducts(filtered);
-  }, [minPrice, maxPrice, sortBy, slug, allProducts, rawProducts]);
+  }, [minPrice, maxPrice, sortBy, rawProducts]);
 
   if (!category) {
     return (

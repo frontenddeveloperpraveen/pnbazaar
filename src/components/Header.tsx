@@ -18,14 +18,14 @@ export const Header: React.FC = () => {
   const profileRef = useRef<HTMLDivElement>(null);
   const publishedProducts = products.filter((p) => p.status !== "draft");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isCheckout = pathname.startsWith("/checkout/");
-  
-  // Suggestions states
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const categoriesRef = useRef<HTMLDivElement>(null);
+  const isCheckout = pathname.startsWith("/checkout/");
 
   // Sync search input with URL query param if present
   useEffect(() => {
@@ -85,6 +85,22 @@ export const Header: React.FC = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Click outside listener for categories dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (categoriesRef.current && !categoriesRef.current.contains(e.target as Node)) {
+        setCategoriesOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Close categories on route change
+  useEffect(() => {
+    setCategoriesOpen(false);
+  }, [pathname]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,13 +162,15 @@ export const Header: React.FC = () => {
           {/* Navigation links */}
           <nav className={`${styles.nav} ${mobileMenuOpen ? styles.navActive : ""}`}>
             <Link href="/" className={styles.navLink}>Home</Link>
-            <div className={styles.dropdown}>
-              <span className={styles.navLink}>Categories</span>
-              <div className={styles.dropdownContent}>
-                <Link href="/category/apparel-accessories">Apparel & Accessories</Link>
-                <Link href="/category/home-office">Home & Office</Link>
-                <Link href="/category/lifestyle-living">Lifestyle & Living</Link>
-                <Link href="/category/wellness-care">Wellness & Care</Link>
+            <div className={styles.dropdown} ref={categoriesRef}>
+              <span className={styles.navLink} onClick={() => setCategoriesOpen(!categoriesOpen)} style={{ cursor: "pointer" }}>
+                Categories <span style={{ fontSize: "10px", marginLeft: "2px" }}>{categoriesOpen ? "▲" : "▼"}</span>
+              </span>
+              <div className={`${styles.dropdownContent} ${categoriesOpen ? styles.dropdownVisible : ""}`}>
+                <Link href="/category/apparel-accessories" onClick={() => setCategoriesOpen(false)}>Apparel & Accessories</Link>
+                <Link href="/category/home-office" onClick={() => setCategoriesOpen(false)}>Home & Office</Link>
+                <Link href="/category/lifestyle-living" onClick={() => setCategoriesOpen(false)}>Lifestyle & Living</Link>
+                <Link href="/category/wellness-care" onClick={() => setCategoriesOpen(false)}>Wellness & Care</Link>
               </div>
             </div>
             <Link href="/orders" className={styles.navLink}>My Orders</Link>

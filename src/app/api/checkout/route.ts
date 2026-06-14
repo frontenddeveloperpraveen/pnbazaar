@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
+import { sendOrderConfirmedEmail } from "../../../lib/email";
 import Razorpay from "razorpay";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { paymentMethod, customerInfo, items, total, appliedCoupon, cashbackApplied, giftWrap, giftNote } = body;
+    const { paymentMethod, customerInfo, items, subtotal, shippingFee, total, appliedCoupon, cashbackApplied, giftWrap, giftNote } = body;
 
     if (!customerInfo || !items || !paymentMethod) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -15,13 +16,18 @@ export async function POST(request: Request) {
     const collection = db.collection("orders");
 
     const orderId = "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-    const date = new Date().toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    const date = new Date().toISOString();
 
     if (paymentMethod === "COD") {
+      const sub = subtotal || total;
+      const delivery = shippingFee || 0;
+      const disc = (sub + delivery) - total;
+
       const newOrder = {
         items,
+        subtotal: sub,
+        discount: disc > 0 ? disc : 0,
+        deliveryFee: delivery,
         total,
         status: "Processing",
         customerInfo,
@@ -37,6 +43,34 @@ export async function POST(request: Request) {
       };
 
       await collection.insertOne(newOrder);
+
+      // Send confirmation email (non-blocking)
+      try {
+        const payload = {
+          orderId: orderId,
+          customerName: customerInfo?.name || "Customer",
+          customerEmail: customerInfo?.email,
+          items: items || [],
+          subtotal: sub,
+          discount: disc > 0 ? disc : 0,
+          deliveryFee: delivery,
+          total: total,
+          shippingAddress: {
+            fullName: customerInfo?.shippingName || customerInfo?.name || "Customer",
+            addressLine: customerInfo?.shippingAddress || customerInfo?.address || "",
+            city: customerInfo?.shippingCity || "",
+            state: customerInfo?.shippingState || "",
+            pincode: customerInfo?.shippingPincode || "",
+            phone: customerInfo?.phone || "",
+          },
+          paymentMethod: "COD",
+          date: date,
+        };
+        await sendOrderConfirmedEmail(payload);
+      } catch (mailErr) {
+        console.error("Failed to send COD confirmation email:", mailErr);
+      }
+
       return NextResponse.json({ success: true, order: newOrder, paymentMethod: "COD" });
     }
 
@@ -56,8 +90,15 @@ export async function POST(request: Request) {
         receipt: "receipt_" + orderId,
       });
 
+      const sub = subtotal || total;
+      const delivery = shippingFee || 0;
+      const disc = (sub + delivery) - total;
+
       const pendingOrder = {
         items,
+        subtotal: sub,
+        discount: disc > 0 ? disc : 0,
+        deliveryFee: delivery,
         total,
         status: "Pending",
         customerInfo,

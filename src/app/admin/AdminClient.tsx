@@ -64,7 +64,7 @@ function AdminPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabFromUrl = searchParams.get("tab") || "home";
-  const validTabs = ["home", "orders", "products", "discounts", "analytics", "aborted-cart", "abandoned-checkouts", "reviews", "faq", "newsletter"];
+  const validTabs = ["home", "orders", "products", "discounts", "analytics", "sessions", "aborted-cart", "abandoned-checkouts", "reviews", "faq", "newsletter"];
   const activeTab = validTabs.includes(tabFromUrl) ? tabFromUrl : "home";
 
   // Login States
@@ -107,6 +107,15 @@ function AdminPageContent() {
   const [logsId, setLogsId] = useState<string | null>(null);
   const [logInput, setLogInput] = useState("");
   const [selectedCarts, setSelectedCarts] = useState<Set<string>>(new Set());
+
+  // Sessions states
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [sessionFilter, setSessionFilter] = useState<string>("all");
+  const [sessionLogsId, setSessionLogsId] = useState<string | null>(null);
+  const [sessionLogInput, setSessionLogInput] = useState("");
+  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
 
   // Abandoned Checkouts states
   const [abandonedCheckouts, setAbandonedCheckouts] = useState<any[]>([]);
@@ -413,6 +422,43 @@ function AdminPageContent() {
     const interval = setInterval(fetchData, 10000);
     return () => { mounted = false; clearInterval(interval); };
   }, [lastAbCheckoutView]);
+
+  // Sessions data fetching with 10s auto-refresh
+  React.useEffect(() => {
+    let mounted = true;
+    const fetchData = async () => {
+      try {
+        const res = await fetch("/api/sessions");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        setSessions(data);
+        setSessionsLoading(false);
+      } catch { if (!mounted) return; setSessionsLoading(false); }
+    };
+    if (activeTab === "sessions") {
+      fetchData();
+      const interval = setInterval(fetchData, 10000);
+      return () => { mounted = false; clearInterval(interval); };
+    } else {
+      return;
+    }
+  }, [activeTab]);
+
+  // Compute abandonment status for a session
+  const computeSessionStatus = (s: any): "active" | "abandoned-cart" | "abandoned-checkout" | "converted" => {
+    const now = Date.now();
+    const updatedAt = new Date(s.updatedAt || s.createdAt || now).getTime();
+    const hasItems = s.items && s.items.length > 0;
+    const hasCheckoutData = s.checkoutData && (s.checkoutData.billingName || s.checkoutData.email);
+    const hasOrder = !!s.orderId;
+    const inactiveMinutes = (now - updatedAt) / 60000;
+
+    if (hasOrder) return "converted";
+    if (hasCheckoutData && inactiveMinutes > 5) return "abandoned-checkout";
+    if (hasItems && inactiveMinutes > 10) return "abandoned-cart";
+    return "active";
+  };
 
   React.useEffect(() => {
     setSelectedOrders(new Set());
@@ -1197,6 +1243,12 @@ function AdminPageContent() {
             className={`${styles.navLink} ${activeTab === "analytics" ? styles.navLinkActive : ""}`}
           >
             Business Insights
+          </button>
+          <button
+            onClick={() => router.push("/admin?tab=sessions")}
+            className={`${styles.navLink} ${activeTab === "sessions" ? styles.navLinkActive : ""}`}
+          >
+            Sessions
           </button>
           <button
             onClick={() => { setLastAbCartView(Date.now()); setNewAbCartCount(0); router.push("/admin?tab=aborted-cart"); }}
@@ -2625,9 +2677,10 @@ function AdminPageContent() {
                       <label>Minimum Order Value (₹)</label>
                       <input
                         type="number"
+                        min="0"
                         placeholder="e.g. 1999 (Leave empty for no limit)"
                         value={couponMinOrder}
-                        onChange={(e) => setCouponMinOrder(e.target.value)}
+                        onChange={(e) => setCouponMinOrder(e.target.value.replace(/^-/, ""))}
                       />
                     </div>
 
@@ -4314,6 +4367,396 @@ function AdminPageContent() {
                   </table>
                 )}
               </div>
+            </div>
+          );
+        })()}
+
+        {/* TAB: Sessions (unified cart + checkout abandonment) */}
+        {activeTab === "sessions" && (() => {
+          const deleteSession = async (visitorId: string) => {
+            if (!window.confirm("Delete this session?")) return;
+            await fetch(`/api/sessions?visitorId=${encodeURIComponent(visitorId)}`, { method: "DELETE" });
+            setSessions(prev => prev.filter(s => s.visitorId !== visitorId));
+          };
+
+          const updateSessionField = async (visitorId: string, updates: any) => {
+            await fetch("/api/sessions", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ visitorId, ...updates }),
+            });
+            setSessions(prev => prev.map(s => s.visitorId === visitorId ? { ...s, ...updates } : s));
+          };
+
+          const addSessionLogEntry = async (visitorId: string, type: string, message: string) => {
+            const s = sessions.find(x => x.visitorId === visitorId);
+            const logs = [...(s?.followUpLogs || []), { type, sentAt: new Date().toISOString(), message }];
+            await updateSessionField(visitorId, { followUpLogs: logs });
+          };
+
+          const toggleSessionSelect = (visitorId: string) => {
+            setSelectedSessions(prev => {
+              const next = new Set(prev);
+              if (next.has(visitorId)) next.delete(visitorId); else next.add(visitorId);
+              return next;
+            });
+          };
+
+          const handleBulkDeleteSessions = async () => {
+            if (selectedSessions.size === 0) return;
+            if (!window.confirm(`Delete ${selectedSessions.size} selected session(s)?`)) return;
+            const promises = Array.from(selectedSessions).map(async (visitorId) => {
+              await fetch(`/api/sessions?visitorId=${encodeURIComponent(visitorId)}`, { method: "DELETE" });
+            });
+            await Promise.all(promises);
+            setSessions(prev => prev.filter(s => !selectedSessions.has(s.visitorId)));
+            setSelectedSessions(new Set());
+          };
+
+          const handleSendEmail = async (visitorId: string, email: string, type: "cart" | "checkout") => {
+            try {
+              const res = await fetch("/api/sessions/send-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ visitorId, email, type }),
+              });
+              if (res.ok) {
+                addSessionLogEntry(visitorId, "email", `Abandoned ${type} email sent to ${email}`);
+                alert("Email sent successfully!");
+              } else {
+                const data = await res.json();
+                alert(data.error || "Failed to send email");
+              }
+            } catch {
+              alert("Failed to send email");
+            }
+          };
+
+          const statusColors: Record<string, string> = {
+            "active": "#008060",
+            "abandoned-cart": "#f59e0b",
+            "abandoned-checkout": "#ef4444",
+            "converted": "#6b7280",
+          };
+
+          const statusLabels: Record<string, string> = {
+            "active": "Active",
+            "abandoned-cart": "Abandoned Cart",
+            "abandoned-checkout": "Abandoned Checkout",
+            "converted": "Converted",
+          };
+
+          let filteredSessions = sessions;
+          if (sessionFilter !== "all") {
+            filteredSessions = sessions.filter(s => computeSessionStatus(s) === sessionFilter);
+          }
+
+          return (
+            <div className={styles.tabContent}>
+              <div className={styles.tabTitleArea}>
+                <h3>Sessions</h3>
+                <p>Track visitor activity — abandonment status is computed on demand based on last action time</p>
+              </div>
+
+              {/* Filter + Bulk actions */}
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px", flexWrap: "wrap" }}>
+                <select
+                  value={sessionFilter}
+                  onChange={(e) => setSessionFilter(e.target.value)}
+                  style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #e1e3e5", fontSize: "13px", background: "#fff", cursor: "pointer" }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="abandoned-cart">Abandoned Cart</option>
+                  <option value="abandoned-checkout">Abandoned Checkout</option>
+                  <option value="converted">Converted</option>
+                </select>
+
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedSessions.size === filteredSessions.length && filteredSessions.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSessions(new Set(filteredSessions.map(s => s.visitorId)));
+                      } else {
+                        setSelectedSessions(new Set());
+                      }
+                    }}
+                  />
+                  Select All
+                </label>
+
+                {selectedSessions.size > 0 && (
+                  <button onClick={handleBulkDeleteSessions} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", padding: "6px 14px", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}>
+                    Delete Selected ({selectedSessions.size})
+                  </button>
+                )}
+              </div>
+
+              {/* Loading / Empty */}
+              {sessionsLoading ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
+                    <circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                  </svg>
+                  <div style={{ marginTop: "8px", fontSize: "13px" }}>Loading sessions...</div>
+                </div>
+              ) : filteredSessions.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", fontSize: "13px" }}>No sessions found.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {filteredSessions.map((s: any) => {
+                    const status = computeSessionStatus(s);
+                    const visitorName = s.checkoutData?.billingName || s.checkoutData?.name || "";
+                    const visitorEmail = s.checkoutData?.billingEmail || s.checkoutData?.email || "";
+                    const visitorPhone = s.checkoutData?.billingPhone || "";
+                    const total = s.items?.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0) || 0;
+                    const itemsCount = s.items?.length || 0;
+                    const updated = s.updatedAt || s.createdAt;
+
+                    return (
+                      <div key={s.visitorId} className={styles.inventoryFullCard} style={{ padding: "14px 16px" }}>
+                        {/* Header row */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedSessions.has(s.visitorId)}
+                            onChange={() => toggleSessionSelect(s.visitorId)}
+                          />
+                          <span style={{ fontWeight: 700, fontSize: "13px", minWidth: "120px" }}>{visitorName || "Guest"}</span>
+                          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{visitorEmail}</span>
+                          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{visitorPhone}</span>
+                          <span style={{ fontSize: "12px", fontWeight: 700, marginLeft: "auto" }}>₹{total.toLocaleString("en-IN")}</span>
+                          <span style={{
+                            display: "inline-block",
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            background: statusColors[status] + "18",
+                            color: statusColors[status],
+                          }}>
+                            {statusLabels[status]}
+                          </span>
+                          <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{updated ? new Date(updated).toLocaleString("en-IN") : ""}</span>
+                          {itemsCount > 0 && (
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{itemsCount} item{itemsCount !== 1 ? "s" : ""}</span>
+                          )}
+                        </div>
+
+                        {/* Expand / Collapse */}
+                        <div style={{ marginTop: "6px" }}>
+                          <button
+                            onClick={() => setExpandedSessionId(expandedSessionId === s.visitorId ? null : s.visitorId)}
+                            style={{ background: "none", border: "none", fontSize: "11px", color: "#008060", cursor: "pointer", fontWeight: 600 }}
+                          >
+                            {expandedSessionId === s.visitorId ? "▲ Hide Details" : "▼ Show Details"}
+                          </button>
+                        </div>
+
+                        {/* Expanded Content */}
+                        {expandedSessionId === s.visitorId && (
+                          <div style={{ marginTop: "12px", borderTop: "1px solid #f0f0f0", paddingTop: "12px" }}>
+                            {/* Items table */}
+                            {s.items && s.items.length > 0 && (
+                              <div>
+                                <strong style={{ fontSize: "12px", display: "block", marginBottom: "6px", color: "#111827" }}>Cart Items</strong>
+                                <table style={{ width: "100%", fontSize: "11px", borderCollapse: "collapse" }}>
+                                  <thead>
+                                    <tr style={{ background: "#f9fafb" }}>
+                                      <th style={{ padding: "6px 8px", textAlign: "left" }}>Product</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Qty</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Price</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {s.items.map((item: any, idx: number) => (
+                                      <tr key={idx}>
+                                        <td style={{ padding: "4px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                          {item.image && <img src={item.image} alt="" style={{ width: 30, height: 30, borderRadius: 4, objectFit: "cover" }} />}
+                                          <span>{item.name}</span>
+                                        </td>
+                                        <td style={{ padding: "4px 8px", textAlign: "right" }}>{item.quantity}</td>
+                                        <td style={{ padding: "4px 8px", textAlign: "right" }}>₹{(item.price * item.quantity).toLocaleString("en-IN")}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+
+                            {/* Checkout form data */}
+                            {s.checkoutData && (s.checkoutData.billingName || s.checkoutData.email) && (
+                              <div style={{ marginTop: "12px" }}>
+                                <strong style={{ fontSize: "12px", display: "block", marginBottom: "6px", color: "#111827" }}>Checkout Details</strong>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "6px", fontSize: "11px" }}>
+                                  {s.checkoutData.billingName && <div><span style={{ color: "var(--text-muted)" }}>Name:</span> {s.checkoutData.billingName}</div>}
+                                  {s.checkoutData.billingEmail && <div><span style={{ color: "var(--text-muted)" }}>Email:</span> {s.checkoutData.billingEmail}</div>}
+                                  {s.checkoutData.billingPhone && <div><span style={{ color: "var(--text-muted)" }}>Phone:</span> {s.checkoutData.billingPhone}</div>}
+                                  {s.checkoutData.billingAddressLine1 && <div><span style={{ color: "var(--text-muted)" }}>Address:</span> {s.checkoutData.billingAddressLine1}{s.checkoutData.billingAddressLine2 ? ", " + s.checkoutData.billingAddressLine2 : ""}</div>}
+                                  {s.checkoutData.billingPincode && <div><span style={{ color: "var(--text-muted)" }}>Pincode:</span> {s.checkoutData.billingPincode}</div>}
+                                  {s.checkoutData.billingCity && <div><span style={{ color: "var(--text-muted)" }}>City:</span> {s.checkoutData.billingCity}</div>}
+                                  {s.checkoutData.billingState && <div><span style={{ color: "var(--text-muted)" }}>State:</span> {s.checkoutData.billingState}</div>}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Map */}
+                            {s.lat && s.lng && (
+                              <div style={{ marginTop: "12px" }}>
+                                <iframe
+                                  width="100%"
+                                  height="200"
+                                  style={{ border: "0", borderRadius: "8px" }}
+                                  loading="lazy"
+                                  referrerPolicy="no-referrer-when-downgrade"
+                                  src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${s.lat},${s.lng}&zoom=14`}
+                                />
+                                <div style={{ marginTop: "4px" }}>
+                                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "11px", color: "#008060" }}>
+                                    Open in Google Maps ↗
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+
+                            {s.ipLocation && (
+                              <div style={{ marginTop: "6px", fontSize: "11px", color: "var(--text-muted)" }}>📍 {s.ipLocation}</div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Action buttons */}
+                        <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap", borderTop: expandedSessionId === s.visitorId ? "1px solid #f0f0f0" : "none", paddingTop: "10px" }}>
+                          <button
+                            onClick={() => {
+                              const link = `${window.location.origin}/cart?restore=${s._id}`;
+                              navigator.clipboard.writeText(link);
+                              addSessionLogEntry(s.visitorId, "link", "Restore link copied");
+                            }}
+                            style={{ background: "#f3f4f6", border: "1px solid #e1e3e5", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", cursor: "pointer" }}
+                          >
+                            Copy Link
+                          </button>
+
+                          {(visitorEmail || s.checkoutData?.billingEmail) && (
+                            <>
+                              <button
+                                onClick={() => handleSendEmail(s.visitorId, visitorEmail || s.checkoutData?.billingEmail, computeSessionStatus(s) === "abandoned-checkout" ? "checkout" : "cart")}
+                                style={{ background: "#008060", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", cursor: "pointer" }}
+                              >
+                                Send Email
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const subject = encodeURIComponent("Complete Your Purchase - PN Bazaar");
+                                  const body = encodeURIComponent("Hi " + (visitorName || "there") + ",\n\nWe noticed you left something behind! Visit us to complete your order.\n\n" + window.location.origin);
+                                  window.open(`mailto:${visitorEmail || s.checkoutData.billingEmail}?subject=${subject}&body=${body}`);
+                                  addSessionLogEntry(s.visitorId, "email", "Email link opened");
+                                }}
+                                style={{ background: "#f3f4f6", border: "1px solid #e1e3e5", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", cursor: "pointer" }}
+                              >
+                                ✉ Email
+                              </button>
+                            </>
+                          )}
+
+                          {visitorPhone && (
+                            <button
+                              onClick={() => {
+                                const msg = encodeURIComponent("Hi " + (visitorName || "there") + "! You have items waiting at PN Bazaar. Complete your order here: " + window.location.origin);
+                                window.open(`https://wa.me/91${visitorPhone.replace(/\D/g, "")}?text=${msg}`);
+                                addSessionLogEntry(s.visitorId, "whatsapp", "WhatsApp message sent");
+                              }}
+                              style={{ background: "#25D366", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", cursor: "pointer" }}
+                            >
+                              WhatsApp
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => setSessionLogsId(sessionLogsId === s.visitorId ? null : s.visitorId)}
+                            style={{ background: "#f3f4f6", border: "1px solid #e1e3e5", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", cursor: "pointer" }}
+                          >
+                            {sessionLogsId === s.visitorId ? "Hide Logs" : "Show Logs"}
+                          </button>
+
+                          {s.archived ? (
+                            <button
+                              onClick={() => updateSessionField(s.visitorId, { archived: false })}
+                              style={{ background: "#f3f4f6", border: "1px solid #e1e3e5", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", cursor: "pointer" }}
+                            >
+                              Unarchive
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => updateSessionField(s.visitorId, { archived: true })}
+                              style={{ background: "#f3f4f6", border: "1px solid #e1e3e5", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", cursor: "pointer" }}
+                            >
+                              Archive
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => deleteSession(s.visitorId)}
+                            style={{ background: "none", border: "1px solid #ef4444", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", cursor: "pointer", color: "#ef4444" }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+
+                        {/* Logs section */}
+                        {sessionLogsId === s.visitorId && (
+                          <div style={{ marginTop: "10px", borderTop: "1px solid #f0f0f0", paddingTop: "10px" }}>
+                            <strong style={{ fontSize: "12px", display: "block", marginBottom: "8px", color: "#111827" }}>Follow-up Logs</strong>
+                            {(s.followUpLogs || []).length === 0 ? (
+                              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>No logs yet.</div>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "8px" }}>
+                                {(s.followUpLogs || []).map((log: any, idx: number) => (
+                                  <div key={idx} style={{ background: "#f9fafb", padding: "8px 10px", borderRadius: "6px", fontSize: "11px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                                      <span style={{ fontWeight: 600, textTransform: "uppercase", fontSize: "10px", color: "var(--text-muted)" }}>{log.type}</span>
+                                      <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{log.sentAt ? new Date(log.sentAt).toLocaleString("en-IN") : ""}</span>
+                                    </div>
+                                    <div style={{ color: "#374151" }}>{log.message}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              <input
+                                type="text"
+                                value={sessionLogInput}
+                                onChange={(e) => setSessionLogInput(e.target.value)}
+                                placeholder="Add a note..."
+                                style={{ flex: 1, padding: "6px 10px", borderRadius: "6px", border: "1px solid #e1e3e5", fontSize: "12px" }}
+                              />
+                              <button
+                                onClick={() => {
+                                  if (!sessionLogInput.trim()) return;
+                                  addSessionLogEntry(s.visitorId, "note", sessionLogInput.trim());
+                                  setSessionLogInput("");
+                                }}
+                                style={{ background: "#008060", color: "#fff", border: "none", borderRadius: "6px", padding: "6px 14px", fontSize: "12px", cursor: "pointer" }}
+                              >
+                                Add Note
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Archived badge */}
+                        {s.archived && (
+                          <div style={{ marginTop: "6px", fontSize: "11px", color: "#6b7280", fontStyle: "italic" }}>Archived</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })()}
