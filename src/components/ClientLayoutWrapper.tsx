@@ -1,12 +1,39 @@
 "use client";
 
-import React, { useEffect, useRef, Suspense } from "react";
+import React, { useEffect, useRef, Suspense, Component } from "react";
 import { usePathname } from "next/navigation";
 import Header from "./Header";
 import Footer from "./Footer";
 import CartDrawer from "./CartDrawer";
 import { trackEvent } from "../lib/tracker";
 import { AuthProvider } from "../context/AuthContext";
+
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error) {
+    console.error("Page crash caught by ErrorBoundary:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: "80px 24px", textAlign: "center" }}>
+          <h2 style={{ marginBottom: 12 }}>Something went wrong</h2>
+          <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>An unexpected error occurred on this page.</p>
+          <button onClick={() => { this.setState({ hasError: false }); window.location.href = "/"; }} style={{ padding: "10px 24px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" }}>
+            Go Home
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function ClientLayoutWrapper({
   children,
@@ -125,7 +152,7 @@ export default function ClientLayoutWrapper({
         <>
           {loaderOverlay}
           <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </>
       ) : (
@@ -136,7 +163,7 @@ export default function ClientLayoutWrapper({
           </Suspense>
           <CartDrawer />
           <main className="main-content" style={{ marginTop: isCheckout ? "0" : "110px", minHeight: isCheckout ? "100vh" : "calc(100vh - 110px - 380px)", display: "flex", flexDirection: "column" }}>
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </main>
           {!isCheckout && <Footer />}
         </>

@@ -2,12 +2,8 @@
   max-width: 1300px;
   width: 100%;
   margin: 0 auto;
-  padding: 56px 24px 40px;
+  padding: 56px 24px 60px;
   animation: fadeIn var(--transition-normal) forwards;
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .header {
@@ -27,18 +23,12 @@
   grid-template-columns: 1fr 380px;
   gap: 30px;
   align-items: flex-start;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
+  margin-bottom: 24px;
 }
 
 .formCol {
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  min-height: 0;
-  max-height: 100%;
-  padding-right: 8px;
 }
 
 .sectionCard {
@@ -157,12 +147,9 @@
 }
 
 .summaryCol {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
 .summaryCard {
@@ -171,7 +158,6 @@
   border-radius: var(--radius-lg);
   padding: 24px 28px;
   box-shadow: var(--shadow-md);
-  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -769,5 +755,45 @@
   .stepAddress .summaryCol,
   .stepPayment .summaryCol {
     display: block !important;
+  }
+  .formGroup label {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .formGroup input,
+  .formGroup select,
+  .formGroup textarea {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .sectionTitle {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+  .formGroup {
+    margin-bottom: 12px;
+  }
+  .formRow {
+    gap: 12px;
+  }
+  .sameAsBilling {
+    font-size: 14px;
+  }
+  .sameAsBilling input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+  .sectionCard {
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .paymentLabel {
+    font-size: 15px;
+  }
+  .paymentDesc {
+    font-size: 12px;
+  }
+  .paymentOption {
+    padding: 14px 18px;
   }
 }

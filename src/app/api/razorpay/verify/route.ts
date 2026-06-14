@@ -72,6 +72,8 @@ export async function POST(request: Request) {
         },
         paymentMethod: "Online (Razorpay)",
         date: order.date,
+        giftWrap: order.giftWrap || undefined,
+        giftNote: order.giftNote?.trim() || undefined,
       };
       await sendOrderConfirmedEmail(payload);
     } catch (mailErr) {

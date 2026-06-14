@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import styles from "./Footer.module.css";
 
 export const Footer: React.FC = () => {
@@ -34,10 +35,10 @@ export const Footer: React.FC = () => {
         <div className={styles.grid}>
           {/* Logo & About */}
           <div className={styles.col}>
-            <a href="/" className={styles.logo}>
+            <Link href="/" className={styles.logo}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="PN Bazaar Logo" className={styles.logoImage} />
-            </a>
+            </Link>
             <p className={styles.desc}>
               Your destination for everyday essentials — backpacks, desk organizers, ceramics, and wellness accessories.
             </p>
@@ -47,10 +48,10 @@ export const Footer: React.FC = () => {
           <div className={styles.col}>
             <h4 className={styles.colTitle}>Shop Categories</h4>
             <ul className={styles.list}>
-              <li><a href="/category/apparel-accessories" className={styles.link}>Apparel & Accessories</a></li>
-              <li><a href="/category/home-office" className={styles.link}>Home & Office</a></li>
-              <li><a href="/category/lifestyle-living" className={styles.link}>Lifestyle & Living</a></li>
-              <li><a href="/category/wellness-care" className={styles.link}>Wellness & Care</a></li>
+              <li><Link href="/category/apparel-accessories" className={styles.link}>Apparel & Accessories</Link></li>
+              <li><Link href="/category/home-office" className={styles.link}>Home & Office</Link></li>
+              <li><Link href="/category/lifestyle-living" className={styles.link}>Lifestyle & Living</Link></li>
+              <li><Link href="/category/wellness-care" className={styles.link}>Wellness & Care</Link></li>
             </ul>
           </div>
 
@@ -58,11 +59,11 @@ export const Footer: React.FC = () => {
           <div className={styles.col}>
             <h4 className={styles.colTitle}>Customer Support</h4>
             <ul className={styles.list}>
-              <li><a href="/orders" className={styles.link}>Track Order</a></li>
-              <li><a href="/policies/return-policy" className={styles.link}>Return Policy</a></li>
-              <li><a href="/policies/terms-conditions" className={styles.link}>Terms & Conditions</a></li>
-              <li><a href="/policies/privacy-policy" className={styles.link}>Privacy Policy</a></li>
-              <li><a href="/policies/cookies-usage" className={styles.link}>Cookies Usage</a></li>
+              <li><Link href="/orders" className={styles.link}>Track Order</Link></li>
+              <li><Link href="/policies/return-policy" className={styles.link}>Return Policy</Link></li>
+              <li><Link href="/policies/terms-conditions" className={styles.link}>Terms & Conditions</Link></li>
+              <li><Link href="/policies/privacy-policy" className={styles.link}>Privacy Policy</Link></li>
+              <li><Link href="/policies/cookies-usage" className={styles.link}>Cookies Usage</Link></li>
             </ul>
           </div>
 

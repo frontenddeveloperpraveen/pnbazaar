@@ -296,6 +296,8 @@ export interface OrderEmailPayload {
   date: string;
   cancelReason?: string;
   trackingLink?: string;
+  giftWrap?: boolean;
+  giftNote?: string;
 }
 
 // 1. Send Order Confirmed Email
@@ -355,6 +357,7 @@ export async function sendOrderConfirmedEmail(order: OrderEmailPayload) {
         <div class="info-card" style="flex: 1; min-width: 240px;">
           <h4>Payment Mode</h4>
           <span style="text-transform: uppercase; font-weight: 600; color: #4a5568;">${order.paymentMethod.replace("_", " ")}</span>
+          ${order.giftWrap ? `<br><span style="display: inline-block; margin-top: 8px; font-size: 12px; padding: 4px 10px; background: #fef3c7; color: #92400e; border-radius: 50px; font-weight: 600;">🎁 Gift Wrap${order.giftNote ? `: "${order.giftNote}"` : ""}</span>` : ""}
         </div>
       </div>
     `

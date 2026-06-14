@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { CATEGORIES, Product } from "../../../data/db";
 import ProductCard from "../../../components/ProductCard";
@@ -14,19 +14,23 @@ interface CategoryClientProps {
 export default function CategoryClient({ slug }: CategoryClientProps) {
   const { products: allProducts } = useCart();
   const category = CATEGORIES.find((c) => c.slug === slug);
-  const rawProducts = allProducts.filter((p) => p.category === slug && p.status !== "draft");
+  const rawProducts = useMemo(
+    () => allProducts.filter((p) => p.category === slug && p.status !== "draft"),
+    [allProducts, slug]
+  );
 
-  // Filtering states — reset when slug changes
-  const maxProductPrice = rawProducts.length > 0 ? Math.max(...rawProducts.map((p) => p.price)) : 10000;
-  const [products, setProducts] = useState<Product[]>(rawProducts);
+  const maxProductPrice = useMemo(
+    () => rawProducts.length > 0 ? Math.max(...rawProducts.map((p) => p.price)) : 10000,
+    [rawProducts]
+  );
+
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(maxProductPrice);
   const [sortBy, setSortBy] = useState<string>("default");
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
-  useEffect(() => {
+  const products = useMemo(() => {
     let filtered = [...rawProducts];
-
     filtered = filtered.filter((p) => p.price >= minPrice && p.price <= maxPrice);
 
     if (sortBy === "price-low") {
@@ -37,7 +41,7 @@ export default function CategoryClient({ slug }: CategoryClientProps) {
       filtered.sort((a, b) => b.rating - a.rating);
     }
 
-    setProducts(filtered);
+    return filtered;
   }, [minPrice, maxPrice, sortBy, rawProducts]);
 
   if (!category) {

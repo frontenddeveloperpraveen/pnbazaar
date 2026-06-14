@@ -672,6 +672,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
       }
 
       const dbOrderId = checkoutData.order.id;
+      const viewToken = checkoutData.order.viewToken || "";
 
       if (paymentMethod === "COD") {
         try {
@@ -679,7 +680,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
           localStorage.removeItem("checkout_" + sessionId);
           await fetch("/api/abandoned-checkouts?sessionId=" + encodeURIComponent(sessionId), { method: "DELETE" });
         } catch {}
-        router.push(`/payment/success?orderId=${dbOrderId}&method=COD`);
+        router.push(`/payment/success?orderId=${dbOrderId}&token=${viewToken}&method=COD`);
         return;
       }
 
@@ -711,16 +712,16 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
               clearCart();
               localStorage.removeItem("checkout_" + sessionId);
               await fetch("/api/abandoned-checkouts?sessionId=" + encodeURIComponent(sessionId), { method: "DELETE" });
-              router.push(`/payment/success?orderId=${dbOrderId}&method=ONLINE`);
+              router.push(`/payment/success?orderId=${dbOrderId}&token=${viewToken}&method=ONLINE`);
             } else {
               setErrors({ form: verifyData.error || "Payment verification failed. Please contact PN Bazaar support." });
               setSubmitting(false);
-              router.push(`/payment/failure?orderId=${dbOrderId}`);
+              router.push(`/payment/failure?orderId=${dbOrderId}&token=${viewToken}`);
             }
           } catch (err: any) {
             setErrors({ form: "An error occurred while validating payment." });
             setSubmitting(false);
-            router.push(`/payment/failure?orderId=${dbOrderId}`);
+            router.push(`/payment/failure?orderId=${dbOrderId}&token=${viewToken}`);
           }
         },
         prefill: {
@@ -734,7 +735,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
           ondismiss: function () {
             // Instantly transition UI to failure without blocking/waiting
             setSubmitting(false);
-            router.push(`/payment/failure?orderId=${dbOrderId}&cancelled=true`);
+            router.push(`/payment/failure?orderId=${dbOrderId}&token=${viewToken}&cancelled=true`);
             // Fire cancel request asynchronously
             fetch("/api/razorpay/cancel", {
               method: "POST",
@@ -1375,7 +1376,6 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
                   {!sameAsBilling && sharedShippingFields}
                 </div>
               </div>
-              {sharedGiftWrapSection}
               {sharedPaymentMethodSection}
             </>
           ) : (
@@ -1491,7 +1491,6 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
                       Add new address
                     </button>
                   </div>
-                  {sharedGiftWrapSection}
                   {sharedPaymentMethodSection}
                 </>
               )}
@@ -1662,6 +1661,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
           </div>
         </div>
       </form>
+      {sharedGiftWrapSection}
     </div>
   );
 }

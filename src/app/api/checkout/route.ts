@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       const sub = subtotal || total;
       const delivery = shippingFee || 0;
       const disc = (sub + delivery) - total;
+      const viewToken = Math.random().toString(36).substr(2, 20);
 
       const newOrder = {
         items,
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
         giftNote: giftNote || undefined,
         paymentVerified: false,
         paymentMethod: "COD",
+        viewToken,
+        viewClaimed: false,
         id: orderId,
         date,
       };
@@ -65,6 +68,8 @@ export async function POST(request: Request) {
           },
           paymentMethod: "COD",
           date: date,
+          giftWrap: giftWrap || undefined,
+          giftNote: giftNote?.trim() || undefined,
         };
         await sendOrderConfirmedEmail(payload);
       } catch (mailErr) {
@@ -94,6 +99,7 @@ export async function POST(request: Request) {
       const delivery = shippingFee || 0;
       const disc = (sub + delivery) - total;
 
+      const viewToken = Math.random().toString(36).substr(2, 20);
       const pendingOrder = {
         items,
         subtotal: sub,
@@ -111,6 +117,8 @@ export async function POST(request: Request) {
         paymentMethod: "Online (Razorpay)",
         razorpayOrderId: razorpayOrder.id,
         razorpayStatus: "created",
+        viewToken,
+        viewClaimed: false,
         id: orderId,
         date,
       };
