@@ -611,7 +611,6 @@ export default function ProductDetailsClient({
             borderRadius: "8px",
           }}
         >
-
           <span style={{ fontSize: "13px", color: "#166534", fontWeight: 600 }}>
             Online Payment 10% instant discount
           </span>
@@ -637,11 +636,11 @@ export default function ProductDetailsClient({
               >
                 <p>
                   We offer standard ground shipping on all domestic orders.
-                  Deliveries take 3-5 business days. Free shipping is
-                  automatically applied at checkout for orders exceeding ₹4,000.
+                  Deliveries take 5-7 business days. Free shipping is
+                  automatically applied at checkout for all orders.
                 </p>
                 <p style={{ marginTop: "8px" }}>
-                  Returns are accepted within 30 days of purchase in their
+                  Returns are accepted within 7 days of purchase in their
                   original, unused condition.
                 </p>
               </div>
@@ -1266,11 +1265,14 @@ export default function ProductDetailsClient({
             +
           </button>
         </div>
-        <button onClick={handleStickyAddToCart} className={styles.stickyCartBtn}>
-                   Add to Cart
-                    </button>
+        <button
+          onClick={handleStickyAddToCart}
+          className={styles.stickyCartBtn}
+        >
+          Add to Cart
+        </button>
         <button onClick={handleStickyBuyNow} className={styles.stickyBuyBtn}>
-                    Buy Now
+          Buy Now
         </button>
       </div>
     </div>
