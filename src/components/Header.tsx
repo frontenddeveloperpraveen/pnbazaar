@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -154,26 +153,26 @@ export const Header: React.FC = () => {
           </button>
 
           {/* Logo */}
-          <Link href="/" className={styles.logo}>
+          <a href="/" className={styles.logo}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="PN Bazaar Logo" className={styles.logoImage} />
-          </Link>
+          </a>
 
           {/* Navigation links */}
           <nav className={`${styles.nav} ${mobileMenuOpen ? styles.navActive : ""}`}>
-            <Link href="/" className={styles.navLink}>Home</Link>
+            <a href="/" className={styles.navLink}>Home</a>
             <div className={styles.dropdown} ref={categoriesRef}>
               <span className={styles.navLink} onClick={() => setCategoriesOpen(!categoriesOpen)} style={{ cursor: "pointer" }}>
                 Categories
               </span>
               <div className={`${styles.dropdownContent} ${categoriesOpen ? styles.dropdownVisible : ""}`}>
-                <Link href="/category/apparel-accessories" onClick={() => { setCategoriesOpen(false); setMobileMenuOpen(false); }}>Apparel & Accessories</Link>
-                <Link href="/category/home-office" onClick={() => { setCategoriesOpen(false); setMobileMenuOpen(false); }}>Home & Office</Link>
-                <Link href="/category/lifestyle-living" onClick={() => { setCategoriesOpen(false); setMobileMenuOpen(false); }}>Lifestyle & Living</Link>
-                <Link href="/category/wellness-care" onClick={() => { setCategoriesOpen(false); setMobileMenuOpen(false); }}>Wellness & Care</Link>
+                <a href="/category/apparel-accessories" onClick={() => setMobileMenuOpen(false)}>Apparel & Accessories</a>
+                <a href="/category/home-office" onClick={() => setMobileMenuOpen(false)}>Home & Office</a>
+                <a href="/category/lifestyle-living" onClick={() => setMobileMenuOpen(false)}>Lifestyle & Living</a>
+                <a href="/category/wellness-care" onClick={() => setMobileMenuOpen(false)}>Wellness & Care</a>
               </div>
             </div>
-            <Link href="/orders" className={styles.navLink}>My Orders</Link>
+            <a href="/orders" className={styles.navLink}>My Orders</a>
           </nav>
 
           {/* Search — hidden on product detail pages */}
@@ -235,12 +234,12 @@ export const Header: React.FC = () => {
                   <span className={styles.profileAvatar}>{user.name.charAt(0).toUpperCase()}</span>
                 </button>
               ) : initialized && !user ? (
-                <Link href="/orders" className={styles.profileBtn} aria-label="Sign in">
+                <a href="/orders" className={styles.profileBtn} aria-label="Sign in">
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                </Link>
+                </a>
               ) : (
                 <div style={{ width: 32, height: 32 }} />
               )}
@@ -250,7 +249,7 @@ export const Header: React.FC = () => {
                     <span className={styles.profileName}>{user.name}</span>
                     <span className={styles.profileEmail}>{user.email}</span>
                   </div>
-                  <Link href="/orders" className={styles.profileDropdownItem} onClick={() => setShowProfileMenu(false)}>My Orders</Link>
+                  <a href="/orders" className={styles.profileDropdownItem} onClick={() => setShowProfileMenu(false)}>My Orders</a>
                   <button onClick={() => { logout(); setShowProfileMenu(false); }} className={styles.profileDropdownItem} style={{ color: "#ef4444", border: "none", background: "none", cursor: "pointer", width: "100%", textAlign: "left", fontSize: "13px", padding: "8px 14px" }}>Sign Out</button>
                 </div>
               )}
@@ -268,9 +267,9 @@ export const Header: React.FC = () => {
           </div>
 
           {isCheckout && (
-            <Link href="/cart" className={styles.checkoutCancel}>
+            <a href="/cart" className={styles.checkoutCancel}>
               Cancel
-            </Link>
+            </a>
           )}
         </div>
       </header>
