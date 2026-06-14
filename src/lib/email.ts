@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import path from "path";
 
 // Zoho Mail SMTP Transporter configuration
 const transporter = nodemailer.createTransport({
@@ -371,7 +372,7 @@ export async function sendOrderConfirmedEmail(order: OrderEmailPayload) {
     attachments: [
       {
         filename: 'logo.png',
-        path: './public/logo.png',
+        path: path.join(process.cwd(), 'public', 'logo.png'),
         cid: 'pnbazaar-logo'
       }
     ]
@@ -421,7 +422,7 @@ export async function sendOrderShippedEmail(order: OrderEmailPayload) {
     attachments: [
       {
         filename: 'logo.png',
-        path: './public/logo.png',
+        path: path.join(process.cwd(), 'public', 'logo.png'),
         cid: 'pnbazaar-logo'
       }
     ]
@@ -470,7 +471,7 @@ export async function sendOrderCancelledEmail(order: OrderEmailPayload) {
     attachments: [
       {
         filename: 'logo.png',
-        path: './public/logo.png',
+        path: path.join(process.cwd(), 'public', 'logo.png'),
         cid: 'pnbazaar-logo'
       }
     ]
@@ -504,7 +505,7 @@ export async function sendOtpEmail(email: string, otp: string, name: string) {
     attachments: [
       {
         filename: 'logo.png',
-        path: './public/logo.png',
+        path: path.join(process.cwd(), 'public', 'logo.png'),
         cid: 'pnbazaar-logo'
       }
     ]
@@ -572,7 +573,7 @@ export async function sendAbandonedEmail(
     attachments: [
       {
         filename: 'logo.png',
-        path: './public/logo.png',
+        path: path.join(process.cwd(), 'public', 'logo.png'),
         cid: 'pnbazaar-logo'
       }
     ]
@@ -622,7 +623,7 @@ export async function sendOrderDeliveredEmail(order: OrderEmailPayload) {
     attachments: [
       {
         filename: 'logo.png',
-        path: './public/logo.png',
+        path: path.join(process.cwd(), 'public', 'logo.png'),
         cid: 'pnbazaar-logo'
       }
     ]

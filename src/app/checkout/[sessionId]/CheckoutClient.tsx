@@ -84,6 +84,18 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
   const [giftWrap, setGiftWrap] = useState(false);
   const [giftNote, setGiftNote] = useState("");
 
+  // Admin settings
+  const [prepaidEnabled, setPrepaidEnabled] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (typeof data.prepaidEnabled === "boolean") setPrepaidEnabled(data.prepaidEnabled);
+      })
+      .catch(() => {});
+  }, []);
+
   // Form errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -1200,100 +1212,101 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
         </div>
       </div>
 
-      <div
-        className={styles.paymentOption}
-        onClick={() => setPaymentMethod("ONLINE")}
-        style={{
-          marginTop: "16px",
-          borderColor:
-            paymentMethod === "ONLINE"
-              ? "var(--primary)"
-              : "var(--border-color)",
-          borderWidth: paymentMethod === "ONLINE" ? "1.5px" : "1px",
-          borderStyle: "solid",
-          boxShadow: paymentMethod === "ONLINE" ? "var(--shadow-sm)" : "none",
-          padding: "16px",
-          borderRadius: "var(--radius-md)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          outline: "none",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        <input
-          type="radio"
-          name="payment"
-          id="online"
-          checked={paymentMethod === "ONLINE"}
-          onChange={() => setPaymentMethod("ONLINE")}
-          style={{ outline: "none", WebkitTapHighlightColor: "transparent" }}
-        />
-        <div style={{ marginLeft: "8px", width: "100%" }}>
-          <label htmlFor="online" className={styles.paymentLabel} style={{ cursor: "pointer", display: "flex", alignItems: "center", WebkitTapHighlightColor: "transparent" }}>
-            <svg
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ marginRight: "6px" }}
+      {prepaidEnabled && (
+        <div
+          className={styles.paymentOption}
+          onClick={() => setPaymentMethod("ONLINE")}
+          style={{
+            marginTop: "16px",
+            borderColor:
+              paymentMethod === "ONLINE"
+                ? "var(--primary)"
+                : "var(--border-color)",
+            borderWidth: paymentMethod === "ONLINE" ? "1.5px" : "1px",
+            borderStyle: "solid",
+            boxShadow: paymentMethod === "ONLINE" ? "var(--shadow-sm)" : "none",
+            padding: "16px",
+            borderRadius: "var(--radius-md)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            outline: "none",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <input
+            type="radio"
+            name="payment"
+            id="online"
+            checked={paymentMethod === "ONLINE"}
+            onChange={() => setPaymentMethod("ONLINE")}
+            style={{ outline: "none", WebkitTapHighlightColor: "transparent" }}
+          />
+          <div style={{ marginLeft: "8px", width: "100%" }}>
+            <label htmlFor="online" className={styles.paymentLabel} style={{ cursor: "pointer", display: "flex", alignItems: "center", WebkitTapHighlightColor: "transparent" }}>
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ marginRight: "6px" }}
+              >
+                <rect x="1" y="4" width="22" height="16" rx="2" />
+                <path d="M1 10h22" />
+                <path d="M5 15h2" />
+              </svg>
+              Online Payment (UPI, Cards, NetBanking)
+            </label>
+            <p className={styles.paymentDesc} style={{ marginBottom: "8px" }}>
+              Pay securely with Credit/Debit cards, NetBanking, or UPI
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+                marginTop: "12px",
+                flexWrap: "wrap",
+              }}
             >
-              <rect x="1" y="4" width="22" height="16" rx="2" />
-              <path d="M1 10h22" />
-              <path d="M5 15h2" />
-            </svg>
-            Online Payment (UPI, Cards, NetBanking)
-          </label>
-          <p className={styles.paymentDesc} style={{ marginBottom: "8px" }}>
-            Pay securely with Credit/Debit cards, NetBanking, or UPI
-          </p>
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              alignItems: "center",
-              marginTop: "12px",
-              flexWrap: "wrap",
-            }}
-          >
-            {/* Payment Gateway icons (Visa, Mastercard, RuPay, UPI SVGs) */}
-            <div style={{ display: "flex", gap: "6px" }}>
-              <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ border: "1px solid #e5e7eb", borderRadius: "3px" }}>
-                <rect width="32" height="20" rx="3" fill="#1A1F71"/>
-                <path d="M12.3 6.1l-1.8 7.8h-1.5l1.8-7.8h1.5zm6.5 0c-.3-.9-1.2-1.2-2.3-1.2h-3.1l-.3 1.3h1.2c.7 0 1.2.2 1.4.5.2.3.1.8-.1 1.4l-.8 3.8h-1.5l.8-3.8c.2-.9-.1-1.3-.8-1.3h-1.2l-.8 3.8h-1.5l1.8-7.8h1.5l-.5 2.2c.4-.7 1.1-.9 1.9-.9.8 0 1.5.3 1.8.8.4.5.3 1.2.1 2.1l-.8 3.8h-1.5l.8-3.8c.2-.9-.1-1.3-.8-1.3h-.2l-.6 2.9" fill="white"/>
-              </svg>
-              <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ border: "1px solid #e5e7eb", borderRadius: "3px" }}>
-                <rect width="32" height="20" rx="3" fill="#222"/>
-                <circle cx="12" cy="10" r="6" fill="#EB001B" opacity="0.9"/>
-                <circle cx="20" cy="10" r="6" fill="#F79E1B" opacity="0.9"/>
-              </svg>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ border: "1px solid #e5e7eb", borderRadius: "3px" }}>
+                  <rect width="32" height="20" rx="3" fill="#1A1F71"/>
+                  <path d="M12.3 6.1l-1.8 7.8h-1.5l1.8-7.8h1.5zm6.5 0c-.3-.9-1.2-1.2-2.3-1.2h-3.1l-.3 1.3h1.2c.7 0 1.2.2 1.4.5.2.3.1.8-.1 1.4l-.8 3.8h-1.5l.8-3.8c.2-.9-.1-1.3-.8-1.3h-1.2l-.8 3.8h-1.5l1.8-7.8h1.5l-.5 2.2c.4-.7 1.1-.9 1.9-.9.8 0 1.5.3 1.8.8.4.5.3 1.2.1 2.1l-.8 3.8h-1.5l.8-3.8c.2-.9-.1-1.3-.8-1.3h-.2l-.6 2.9" fill="white"/>
+                </svg>
+                <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ border: "1px solid #e5e7eb", borderRadius: "3px" }}>
+                  <rect width="32" height="20" rx="3" fill="#222"/>
+                  <circle cx="12" cy="10" r="6" fill="#EB001B" opacity="0.9"/>
+                  <circle cx="20" cy="10" r="6" fill="#F79E1B" opacity="0.9"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #007a87", padding: "1px 5px", borderRadius: "3px", color: "#007a87", backgroundColor: "#eefbfc", whiteSpace: "nowrap" }}>
+                BHIM UPI
+              </span>
+              <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #1a1f71", padding: "1px 5px", borderRadius: "3px", color: "#1a1f71", backgroundColor: "#f0f2fa", whiteSpace: "nowrap" }}>
+                CARDS
+              </span>
+              <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #5f259f", padding: "1px 5px", borderRadius: "3px", color: "#5f259f", backgroundColor: "#f8f3fc", whiteSpace: "nowrap" }}>
+                NETBANKING
+              </span>
             </div>
-            <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #007a87", padding: "1px 5px", borderRadius: "3px", color: "#007a87", backgroundColor: "#eefbfc", whiteSpace: "nowrap" }}>
-              BHIM UPI
-            </span>
-            <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #1a1f71", padding: "1px 5px", borderRadius: "3px", color: "#1a1f71", backgroundColor: "#f0f2fa", whiteSpace: "nowrap" }}>
-              CARDS
-            </span>
-            <span style={{ fontSize: "9px", letterSpacing: "0.5px", fontWeight: "bold", border: "1px solid #5f259f", padding: "1px 5px", borderRadius: "3px", color: "#5f259f", backgroundColor: "#f8f3fc", whiteSpace: "nowrap" }}>
-              NETBANKING
-            </span>
+            <p
+              style={{
+                marginTop: "10px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#16a34a",
+              }}
+            >
+              Pay online &amp; get 10% instant discount
+            </p>
           </div>
-          <p
-            style={{
-              marginTop: "10px",
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "#16a34a",
-            }}
-          >
-            Pay online &amp; get 5% instant discount
-          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 
@@ -1321,7 +1334,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
   }
 
   const giftWrapFee = giftWrap ? 35 : 0;
-  const onlineDiscount = paymentMethod === "ONLINE" ? Math.round(session.subtotal * 0.05) : 0;
+  const onlineDiscount = paymentMethod === "ONLINE" ? Math.round(session.subtotal * 0.10) : 0;
   const total =
     session.subtotal -
     session.totalDiscount -

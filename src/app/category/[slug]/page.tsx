@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     openGraph: {
       title,
       description,
-      url: `https://pnbazaar.com/category/${category.slug}`,
+      url: `https://pnbazaar.shop/category/${category.slug}`,
       images: [
         {
           url: category.image,

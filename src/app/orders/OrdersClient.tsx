@@ -359,12 +359,12 @@ function OrdersContent() {
                     </div>
                     <div>
                       <span className={styles.metaLabel}>Date Placed</span>
-                      <span className={styles.metaVal}>{order.date}</span>
+                      <span className={styles.metaVal}>{new Date(order.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                     </div>
                     <div>
-                      <span className={styles.metaLabel}>Total Paid</span>
+                      <span className={styles.metaLabel}>{order.customerInfo?.paymentMethod === "COD" ? "Mode" : "Total Paid"}</span>
                       <span className={`${styles.metaVal} ${styles.totalPaid}`}>
-                        ₹{order.total.toLocaleString("en-IN")}
+                        {order.customerInfo?.paymentMethod === "COD" ? "COD" : `₹${order.total.toLocaleString("en-IN")}`}
                       </span>
                     </div>
                   </div>

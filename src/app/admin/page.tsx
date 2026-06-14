@@ -8,10 +8,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Admin Portal | PN Bazaar",
     description: "PN Bazaar administrator management panel for orders, products, inventory, offers, and analytics.",
-    url: "https://pnbazaar.com/admin",
+    url: "https://pnbazaar.shop/admin",
     images: [
       {
-        url: "https://pnbazaar.com/logo.png",
+        url: "https://pnbazaar.shop/logo.png",
         width: 1200,
         height: 630,
         alt: "PN Bazaar Logo",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Admin Portal | PN Bazaar",
     description: "PN Bazaar administrator management panel for orders, products, inventory, offers, and analytics.",
-    images: ["https://pnbazaar.com/logo.png"],
+    images: ["https://pnbazaar.shop/logo.png"],
   },
 };
 

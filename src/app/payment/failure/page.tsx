@@ -97,8 +97,8 @@ function PaymentFailureContent() {
 
           <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 24, lineHeight: 1.5 }}>
             Need help?{" "}
-            <a href="mailto:support@pnbazaar.com" style={{ color: "#111827", fontWeight: 600, textDecoration: "underline" }}>
-              support@pnbazaar.com
+            <a href="mailto:support@pnbazaar.shop" style={{ color: "#111827", fontWeight: 600, textDecoration: "underline" }}>
+              support@pnbazaar.shop
             </a>
           </p>
         </div>

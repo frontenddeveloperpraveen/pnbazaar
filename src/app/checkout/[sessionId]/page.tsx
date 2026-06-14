@@ -14,10 +14,10 @@ export async function generateMetadata({ params }: CheckoutPageProps): Promise<M
     openGraph: {
       title: "Secure Checkout | PN Bazaar",
       description: "Complete your checkout at PN Bazaar. Secure Cash on Delivery order placement.",
-      url: `https://pnbazaar.com/checkout/${sessionId}`,
+      url: `https://pnbazaar.shop/checkout/${sessionId}`,
       images: [
         {
-          url: "https://pnbazaar.com/logo.png",
+          url: "https://pnbazaar.shop/logo.png",
           width: 1200,
           height: 630,
           alt: "PN Bazaar Logo",
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: CheckoutPageProps): Promise<M
       card: "summary_large_image",
       title: "Secure Checkout | PN Bazaar",
       description: "Complete your checkout at PN Bazaar. Secure Cash on Delivery order placement.",
-      images: ["https://pnbazaar.com/logo.png"],
+      images: ["https://pnbazaar.shop/logo.png"],
     },
   };
 }

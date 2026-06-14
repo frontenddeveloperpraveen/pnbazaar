@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "PN Bazaar | Premium Minimalist Everyday Goods",
     description: "Explore a curated collection of everyday canvas carry-goods, felt workspace organizers, and premium lifestyle accessories.",
-    url: "https://pnbazaar.com",
+    url: "https://pnbazaar.shop",
     siteName: "PN Bazaar",
     images: [
       {
-        url: "https://pnbazaar.com/logo.png",
+        url: "https://pnbazaar.shop/logo.png",
         width: 1200,
         height: 630,
         alt: "PN Bazaar Logo",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "PN Bazaar | Premium Minimalist Everyday Goods",
     description: "Explore a curated collection of everyday canvas carry-goods, felt workspace organizers, and premium lifestyle accessories.",
-    images: ["https://pnbazaar.com/logo.png"],
+    images: ["https://pnbazaar.shop/logo.png"],
   },
 };
 

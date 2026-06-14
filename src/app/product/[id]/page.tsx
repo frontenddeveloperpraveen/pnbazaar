@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       title,
       description: ogDescription,
       type: "website",
-      url: `https://pnbazaar.com/product/${slug}`,
+      url: `https://pnbazaar.shop/product/${slug}`,
       images: [
         {
           url: mainImage,

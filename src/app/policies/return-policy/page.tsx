@@ -27,7 +27,7 @@ export default function ReturnPolicyPage() {
 
       <h2 style={{ fontSize: "20px", marginTop: "24px", marginBottom: "12px" }}>4. Contact Support</h2>
       <p style={{ marginBottom: "16px" }}>
-        If you have any questions about returns, please contact our support team at <strong>support@pnbazaar.com</strong>.
+        If you have any questions about returns, please contact our support team at <strong>support@pnbazaar.shop</strong>.
       </p>
     </div>
   );

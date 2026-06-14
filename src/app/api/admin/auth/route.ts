@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { signJwt, verifyJwt } from "../../../../lib/jwt";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@pnbazaar.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@pnbazaar.shop";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "adminpassword123";
 const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET || "jwt_admin_super_secret_key_123456";
 

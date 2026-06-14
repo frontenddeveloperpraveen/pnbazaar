@@ -8,10 +8,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "My Orders | PN Bazaar",
     description: "View and track the status of your premium canvas backpacks, workspace organization organizers, and lifestyle orders.",
-    url: "https://pnbazaar.com/orders",
+    url: "https://pnbazaar.shop/orders",
     images: [
       {
-        url: "https://pnbazaar.com/logo.png",
+        url: "https://pnbazaar.shop/logo.png",
         width: 1200,
         height: 630,
         alt: "PN Bazaar Logo",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "My Orders | PN Bazaar",
     description: "View and track the status of your premium canvas backpacks, workspace organization organizers, and lifestyle orders.",
-    images: ["https://pnbazaar.com/logo.png"],
+    images: ["https://pnbazaar.shop/logo.png"],
   },
 };
 

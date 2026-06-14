@@ -64,7 +64,7 @@ function AdminPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabFromUrl = searchParams.get("tab") || "home";
-  const validTabs = ["home", "orders", "products", "discounts", "analytics", "sessions", "aborted-cart", "abandoned-checkouts", "reviews", "faq", "newsletter"];
+  const validTabs = ["home", "orders", "products", "discounts", "analytics", "sessions", "aborted-cart", "abandoned-checkouts", "reviews", "faq", "newsletter", "settings"];
   const activeTab = validTabs.includes(tabFromUrl) ? tabFromUrl : "home";
 
   // Login States
@@ -151,6 +151,24 @@ function AdminPageContent() {
   const [faqAnswer, setFaqAnswer] = useState("");
   const [faqEditId, setFaqEditId] = useState<string | null>(null);
   const [faqShowForm, setFaqShowForm] = useState(false);
+  // Settings state
+  const [prepaidEnabled, setPrepaidEnabled] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (activeTab === "settings") {
+      setSettingsLoading(true);
+      fetch("/api/settings")
+        .then(res => res.json())
+        .then(data => {
+          if (typeof data.prepaidEnabled === "boolean") setPrepaidEnabled(data.prepaidEnabled);
+          setSettingsLoading(false);
+        })
+        .catch(() => setSettingsLoading(false));
+    }
+  }, [activeTab]);
+
   const [reviewText, setReviewText] = useState("");
   const [reviewMediaUrl, setReviewMediaUrl] = useState("");
   const [reviewMediaType, setReviewMediaType] = useState<"image" | "video" | "">("");
@@ -1285,6 +1303,12 @@ function AdminPageContent() {
             className={`${styles.navLink} ${activeTab === "newsletter" ? styles.navLinkActive : ""}`}
           >
             Newsletter
+          </button>
+          <button
+            onClick={() => router.push("/admin?tab=settings")}
+            className={`${styles.navLink} ${activeTab === "settings" ? styles.navLinkActive : ""}`}
+          >
+            Settings
           </button>
         </nav>
 
@@ -4815,6 +4839,87 @@ function AdminPageContent() {
                       ))}
                     </tbody>
                   </table>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* TAB 10: Settings */}
+        {activeTab === "settings" && (() => {
+          const handleToggle = async () => {
+            const newVal = !prepaidEnabled;
+            setSettingsSaving(true);
+            try {
+              const res = await fetch("/api/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prepaidEnabled: newVal }),
+              });
+              if (res.ok) {
+                setPrepaidEnabled(newVal);
+              } else {
+                alert("Failed to save setting");
+              }
+            } catch {
+              alert("Failed to save setting");
+            } finally {
+              setSettingsSaving(false);
+            }
+          };
+
+          return (
+            <div className={styles.tabContent}>
+              <div className={styles.tabTitleArea}>
+                <h3>Payment Settings</h3>
+                <p>Control which payment methods are available at checkout</p>
+              </div>
+
+              <div style={{ background: "#fff", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "24px", maxWidth: "500px" }}>
+                {settingsLoading ? (
+                  <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)" }}>Loading...</div>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "14px", marginBottom: "4px" }}>Prepaid (Online) Payments</div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                          When enabled, customers can pay via UPI, Cards, NetBanking. When disabled, only Cash on Delivery is available.
+                        </div>
+                      </div>
+                      <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px", flexShrink: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={prepaidEnabled}
+                          onChange={handleToggle}
+                          disabled={settingsSaving}
+                          style={{ opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span style={{
+                          position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0,
+                          backgroundColor: prepaidEnabled ? "#008060" : "#ccc",
+                          transition: "0.3s", borderRadius: "24px",
+                          opacity: settingsSaving ? 0.6 : 1,
+                        }}>
+                          <span style={{
+                            position: "absolute", content: "", height: "18px", width: "18px",
+                            left: prepaidEnabled ? "22px" : "3px", bottom: "3px",
+                            backgroundColor: "white", transition: "0.3s", borderRadius: "50%",
+                          }} />
+                        </span>
+                      </label>
+                    </div>
+                    <div style={{
+                      padding: "12px 16px", borderRadius: "6px", fontSize: "13px", fontWeight: 500,
+                      backgroundColor: prepaidEnabled ? "#e6f4ea" : "#fef7e0",
+                      color: prepaidEnabled ? "#137333" : "#b06000",
+                    }}>
+                      {prepaidEnabled
+                        ? "Customers will see both Cash on Delivery and Online Payment options at checkout."
+                        : "Only Cash on Delivery will be shown to customers at checkout."
+                      }
+                    </div>
+                  </>
                 )}
               </div>
             </div>

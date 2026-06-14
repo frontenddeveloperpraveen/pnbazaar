@@ -8,10 +8,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Search Results | PN Bazaar",
     description: "Search for premium minimalist canvas backpacks, desk organizers, ceramics, and lifestyle accessories.",
-    url: "https://pnbazaar.com/search",
+    url: "https://pnbazaar.shop/search",
     images: [
       {
-        url: "https://pnbazaar.com/logo.png",
+        url: "https://pnbazaar.shop/logo.png",
         width: 1200,
         height: 630,
         alt: "PN Bazaar Logo",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Search Results | PN Bazaar",
     description: "Search for premium minimalist canvas backpacks, desk organizers, ceramics, and lifestyle accessories.",
-    images: ["https://pnbazaar.com/logo.png"],
+    images: ["https://pnbazaar.shop/logo.png"],
   },
 };
 
