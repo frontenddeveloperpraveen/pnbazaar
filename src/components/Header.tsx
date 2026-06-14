@@ -164,13 +164,13 @@ export const Header: React.FC = () => {
             <Link href="/" className={styles.navLink}>Home</Link>
             <div className={styles.dropdown} ref={categoriesRef}>
               <span className={styles.navLink} onClick={() => setCategoriesOpen(!categoriesOpen)} style={{ cursor: "pointer" }}>
-                Categories <span style={{ fontSize: "10px", marginLeft: "2px" }}>{categoriesOpen ? "▲" : "▼"}</span>
+                Categories
               </span>
               <div className={`${styles.dropdownContent} ${categoriesOpen ? styles.dropdownVisible : ""}`}>
-                <Link href="/category/apparel-accessories" onClick={() => setCategoriesOpen(false)}>Apparel & Accessories</Link>
-                <Link href="/category/home-office" onClick={() => setCategoriesOpen(false)}>Home & Office</Link>
-                <Link href="/category/lifestyle-living" onClick={() => setCategoriesOpen(false)}>Lifestyle & Living</Link>
-                <Link href="/category/wellness-care" onClick={() => setCategoriesOpen(false)}>Wellness & Care</Link>
+                <Link href="/category/apparel-accessories" onClick={() => { setCategoriesOpen(false); setMobileMenuOpen(false); }}>Apparel & Accessories</Link>
+                <Link href="/category/home-office" onClick={() => { setCategoriesOpen(false); setMobileMenuOpen(false); }}>Home & Office</Link>
+                <Link href="/category/lifestyle-living" onClick={() => { setCategoriesOpen(false); setMobileMenuOpen(false); }}>Lifestyle & Living</Link>
+                <Link href="/category/wellness-care" onClick={() => { setCategoriesOpen(false); setMobileMenuOpen(false); }}>Wellness & Care</Link>
               </div>
             </div>
             <Link href="/orders" className={styles.navLink}>My Orders</Link>

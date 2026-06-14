@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { CATEGORIES, Product } from "../../../data/db";
 import ProductCard from "../../../components/ProductCard";
@@ -23,18 +23,6 @@ export default function CategoryClient({ slug }: CategoryClientProps) {
   const [maxPrice, setMaxPrice] = useState<number>(maxProductPrice);
   const [sortBy, setSortBy] = useState<string>("default");
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
-  const slugRef = useRef(slug);
-
-  // Reset filters when navigating to a different category
-  useEffect(() => {
-    if (slugRef.current !== slug) {
-      slugRef.current = slug;
-      setMinPrice(0);
-      setMaxPrice(maxProductPrice);
-      setSortBy("default");
-      setProducts(rawProducts);
-    }
-  }, [slug, rawProducts, maxProductPrice]);
 
   useEffect(() => {
     let filtered = [...rawProducts];

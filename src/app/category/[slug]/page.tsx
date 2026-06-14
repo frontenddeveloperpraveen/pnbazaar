@@ -50,5 +50,5 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  return <CategoryClient slug={slug} />;
+  return <CategoryClient key={slug} slug={slug} />;
 }
