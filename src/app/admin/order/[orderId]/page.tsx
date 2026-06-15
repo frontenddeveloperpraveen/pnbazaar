@@ -426,10 +426,10 @@ export default function OrderDetailPage() {
                 <span style={{ color: "#008060", fontWeight: 600 }}>₹{order.cashbackApplied}</span>
               </div>
             )}
-            {order.customerInfo?.giftWrap && (
+            {((order as any).giftWrap || order.customerInfo?.giftWrap) && (
               <div className={styles.detailRow}>
                 <span className={styles.detailLabel}>Gift Wrap</span>
-                <span>Yes {order.customerInfo.giftNote ? `— "${order.customerInfo.giftNote}"` : ""}</span>
+                <span>Yes {((order as any).giftNote || order.customerInfo?.giftNote) ? `— "${(order as any).giftNote || order.customerInfo?.giftNote}"` : ""}</span>
               </div>
             )}
           </div>
