@@ -3,16 +3,23 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, type Product } from "../data/db";
+import { type Product } from "../data/db";
 import ProductCard from "../components/ProductCard";
 import { useCart } from "../context/CartContext";
 import styles from "./page.module.css";
 import { trackEvent } from "../lib/tracker";
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop";
+const HERO_CATEGORIES = [
+  { name: "Apparel & Accessories", slug: "apparel-accessories" },
+  { name: "Home & Office", slug: "home-office" },
+];
+
 export default function HomePageClient() {
   const router = useRouter();
   const { products } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
   const publishedProducts = products.filter((p) => p.status !== "draft");
   const featuredProducts = publishedProducts.filter((p) => p.isFeatured);
   const hotProducts = publishedProducts.filter((p) => p.isHot);
@@ -28,6 +35,17 @@ export default function HomePageClient() {
   useEffect(() => {
     trackEvent("pageview", "/");
   }, []);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((data) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => setCategories([]));
+  }, []);
+
+  const catList = categories.length > 0
+    ? categories
+    : HERO_CATEGORIES.map((c) => ({ ...c, description: "", image: FALLBACK_IMAGE }));
 
   const handleMobileSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +161,7 @@ export default function HomePageClient() {
           <p className={styles.sectionDesc}>Explore our seasonal lines designed to simplify and elevate your routine.</p>
         </div>
         <div className={styles.categoriesGrid}>
-          {CATEGORIES.map((cat) => (
+          {catList.map((cat) => (
             <Link key={cat.slug} href={`/category/${cat.slug}`} className={styles.categoryCard}>
               <div className={styles.catImageWrapper}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -175,7 +193,7 @@ export default function HomePageClient() {
       </section>
 
       {/* Products by Category */}
-      {CATEGORIES.filter(c => byCategory.has(c.slug)).map(cat => (
+      {catList.filter(c => byCategory.has(c.slug)).map(cat => (
         <section key={cat.slug} className={`${styles.section} ${styles.categoryProductsSection}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>{cat.name}</h2>

@@ -426,7 +426,9 @@ function AdminPageContent() {
     let mounted = true;
     const fetchData = async () => {
       try {
-        const res = await fetch("/api/abandoned-checkouts");
+        const res = await fetch("/api/abandoned-checkouts", {
+          headers: { "x-admin-token": localStorage.getItem("admin_access_token") || "" }
+        });
         if (!res.ok) return;
         const data = await res.json();
         if (!mounted) return;
@@ -446,7 +448,9 @@ function AdminPageContent() {
     let mounted = true;
     const fetchData = async () => {
       try {
-        const res = await fetch("/api/sessions");
+        const res = await fetch("/api/sessions", {
+          headers: { "x-admin-token": localStorage.getItem("admin_access_token") || "" }
+        });
         if (!res.ok) return;
         const data = await res.json();
         if (!mounted) return;

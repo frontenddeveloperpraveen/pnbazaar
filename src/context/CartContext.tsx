@@ -615,7 +615,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchAbandonedCarts = async () => {
     try {
-      const res = await fetch("/api/abandoned-carts");
+      const res = await fetch("/api/abandoned-carts", {
+        headers: { "x-admin-token": typeof window !== "undefined" ? localStorage.getItem("admin_access_token") || "" : "" }
+      });
       if (res.ok) return await res.json();
       return [];
     } catch (err) {
