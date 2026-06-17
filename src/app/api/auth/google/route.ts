@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { signJwt } from "../../../../lib/jwt";
+import { getGenericError } from "../../../../lib/security";
 
-const JWT_SECRET = process.env.JWT_ADMIN_SECRET || "jwt_admin_super_secret_key_123456";
-const GOOGLE_CLIENT_ID = "1025360315399-rpl33br5haa520mp35gj9m1cvifp72rn.apps.googleusercontent.com";
+const JWT_SECRET = process.env.JWT_ADMIN_SECRET || "";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 
 export async function POST(request: Request) {
   try {
+    if (!JWT_SECRET || !GOOGLE_CLIENT_ID) {
+      return NextResponse.json({ error: "Server configuration incomplete" }, { status: 500 });
+    }
     const { credential } = await request.json();
     if (!credential) {
       return NextResponse.json({ error: "Google credential is required" }, { status: 400 });
@@ -33,6 +37,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, token, email, name });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
+import { getGenericError } from "../../../lib/security";
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
     });
     return NextResponse.json(formatted);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     const result = await collection.insertOne(doc);
     return NextResponse.json({ success: true, _id: result.insertedId.toString() }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -55,6 +56,6 @@ export async function DELETE(request: Request) {
     await collection.deleteOne({ _id: new ObjectId(id) });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

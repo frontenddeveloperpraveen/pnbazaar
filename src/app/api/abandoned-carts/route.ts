@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
+import { verifyAdminAuth, checkRateLimit, getGenericError } from "../../../lib/security";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!verifyAdminAuth(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const db = await getDatabase();
     const collection = db.collection("abandoned_carts");
@@ -11,13 +15,16 @@ export async function GET() {
       return { ...rest, _id: _id.toString() };
     });
     return NextResponse.json(formatted);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
+    if (!checkRateLimit("abandoned-carts:" + (request.headers.get("x-forwarded-for") || "unknown"), 10, 60000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
     const db = await getDatabase();
     const collection = db.collection("abandoned_carts");
     const body = await request.json();
@@ -38,13 +45,16 @@ export async function POST(request: Request) {
     };
     const result = await collection.insertOne(doc);
     return NextResponse.json({ ...doc, _id: result.insertedId.toString() }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
   try {
+    if (!verifyAdminAuth(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const db = await getDatabase();
     const collection = db.collection("abandoned_carts");
     const body = await request.json();
@@ -56,13 +66,16 @@ export async function PUT(request: Request) {
       { $set: { ...updateData, updatedAt: new Date().toISOString() } }
     );
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
+    if (!verifyAdminAuth(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const db = await getDatabase();
     const collection = db.collection("abandoned_carts");
     const { searchParams } = new URL(request.url);
@@ -71,7 +84,7 @@ export async function DELETE(request: Request) {
     const { ObjectId } = require("mongodb");
     await collection.deleteOne({ _id: new ObjectId(id) });
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

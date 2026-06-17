@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
 import { sendOrderConfirmedEmail } from "../../../lib/email";
 import Razorpay from "razorpay";
+import { secureToken, secureOrderId, checkRateLimit, checkOrigin, getGenericError } from "../../../lib/security";
 
 export async function POST(request: Request) {
   try {
+    if (!checkRateLimit("checkout:" + request.headers.get("x-forwarded-for") || "unknown", 10, 60000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    if (!checkOrigin(request)) {
+      return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+    }
     const body = await request.json();
     const { paymentMethod, customerInfo, items, subtotal, shippingFee, total, appliedCoupon, cashbackApplied, giftWrap, giftNote } = body;
 
@@ -15,14 +23,26 @@ export async function POST(request: Request) {
     const db = await getDatabase();
     const collection = db.collection("orders");
 
-    const orderId = "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+    const orderId = secureOrderId();
     const date = new Date().toISOString();
 
     if (paymentMethod === "COD") {
       const sub = subtotal || total;
       const delivery = shippingFee || 0;
-      const disc = (sub + delivery) - total;
-      const viewToken = Math.random().toString(36).substr(2, 20);
+      const disc = Math.max(0, (sub + delivery) - total);
+      const viewToken = secureToken();
+
+      // Server-side price validation: recalculate total from items
+      let validatedSubtotal = 0;
+      for (const item of (items || [])) {
+        const qty = item.quantity || 1;
+        const price = item.product?.price || item.price || 0;
+        validatedSubtotal += price * qty;
+      }
+      // If client subtotal differs significantly, reject
+      if (Math.abs(validatedSubtotal - sub) > 1) {
+        return NextResponse.json({ error: "Price mismatch detected" }, { status: 400 });
+      }
 
       const newOrder = {
         items,
@@ -80,6 +100,12 @@ export async function POST(request: Request) {
     }
 
     if (paymentMethod === "ONLINE") {
+      const settings = await db.collection("settings").findOne({ key: "payment_config" });
+      const prepaidEnabled = settings?.value?.prepaidEnabled ?? true;
+      if (!prepaidEnabled) {
+        return NextResponse.json({ error: "Online payments are currently disabled" }, { status: 403 });
+      }
+
       const key_id = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       const key_secret = process.env.RAZORPAY_KEY_SECRET;
 
@@ -97,9 +123,9 @@ export async function POST(request: Request) {
 
       const sub = subtotal || total;
       const delivery = shippingFee || 0;
-      const disc = (sub + delivery) - total;
+      const disc = Math.max(0, (sub + delivery) - total);
 
-      const viewToken = Math.random().toString(36).substr(2, 20);
+      const viewToken = secureToken();
       const pendingOrder = {
         items,
         subtotal: sub,
@@ -140,6 +166,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
   } catch (error: any) {
     console.error("Checkout error:", error);
-    return NextResponse.json({ error: error.message || "Checkout failed" }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

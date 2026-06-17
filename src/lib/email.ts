@@ -1,14 +1,18 @@
 import nodemailer from "nodemailer";
 import path from "path";
 
+if (!process.env.SMTP_PASS) {
+  console.warn("WARNING: SMTP_PASS environment variable not set. Email sending will fail.");
+}
+
 // Zoho Mail SMTP Transporter configuration
 const transporter = nodemailer.createTransport({
   host: "smtp.zoho.in",
   port: 465,
   secure: true, // true for port 465 SSL
   auth: {
-    user: "noreply@pnbazaar.shop",
-    pass: "aS3al$fw",
+    user: process.env.SMTP_USER || "noreply@pnbazaar.shop",
+    pass: process.env.SMTP_PASS || "",
   },
 });
 

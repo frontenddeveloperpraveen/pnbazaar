@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { getDatabase } from "../../../../lib/mongodb";
+import { sanitizeHtml, getGenericError } from "../../../../lib/security";
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.zoho.in",
+  host: process.env.SMTP_HOST || "smtp.zoho.in",
   port: 465,
   secure: true,
   auth: {
-    user: "noreply@pnbazaar.shop",
-    pass: "aS3al$fw",
+    user: process.env.SMTP_USER || "noreply@pnbazaar.shop",
+    pass: process.env.SMTP_PASS || "",
   },
 });
 
@@ -39,10 +40,10 @@ export async function POST(request: Request) {
     }).join("");
 
     const imagesHtml = (imageUrls || []).length > 0
-      ? imageUrls.map((url: string) => `<div style="margin-bottom:12px"><img src="${url}" alt="User uploaded" style="max-width:400px;border-radius:8px;border:1px solid #e2e8f0" /></div>`).join("")
+      ? imageUrls.map((url: string) => `<div style="margin-bottom:12px"><img src="${sanitizeHtml(url)}" alt="User uploaded" style="max-width:400px;border-radius:8px;border:1px solid #e2e8f0" /></div>`).join("")
       : "<p style='color:#666'>No images uploaded</p>";
 
-    const requestLabel = requestType === "return" ? "Return" : "Replacement";
+    const requestLabel = sanitizeHtml(requestType === "return" ? "Return" : "Replacement");
 
     await transporter.sendMail({
       from: `"PN Bazaar" <noreply@pnbazaar.shop>`,
@@ -69,8 +70,8 @@ export async function POST(request: Request) {
 
 <div style="background:#f7fafc;border-radius:8px;padding:16px;margin-bottom:20px">
 <h4 style="margin:0 0 8px;font-size:13px;color:#718096;text-transform:uppercase;letter-spacing:0.5px">Customer Info</h4>
-<p style="margin:0;font-size:14px;color:#111827"><strong>Name:</strong> ${customerName || order.customerInfo?.name || "N/A"}</p>
-<p style="margin:4px 0 0;font-size:14px;color:#111827"><strong>Email:</strong> ${customerEmail || order.customerInfo?.email || "N/A"}</p>
+<p style="margin:0;font-size:14px;color:#111827"><strong>Name:</strong> ${sanitizeHtml(customerName || order.customerInfo?.name || "N/A")}</p>
+<p style="margin:4px 0 0;font-size:14px;color:#111827"><strong>Email:</strong> ${sanitizeHtml(customerEmail || order.customerInfo?.email || "N/A")}</p>
 <p style="margin:4px 0 0;font-size:14px;color:#111827"><strong>Order Total:</strong> ${formatPrice(order.total || 0)}</p>
 <p style="margin:4px 0 0;font-size:14px;color:#111827"><strong>Payment:</strong> ${order.customerInfo?.paymentMethod === "COD" ? "Cash on Delivery" : order.customerInfo?.paymentMethod || "Standard"}</p>
 <p style="margin:4px 0 0;font-size:14px;color:#111827"><strong>Order Date:</strong> ${new Date(order.date).toLocaleString("en-IN")}</p>
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
 
 <div style="background:#f7fafc;border-radius:8px;padding:16px;margin-bottom:20px">
 <h4 style="margin:0 0 8px;font-size:13px;color:#718096;text-transform:uppercase;letter-spacing:0.5px;color:${requestType === "return" ? "#b91c1c" : "#1e40af"}">${requestLabel} Reason</h4>
-<p style="margin:0;font-size:14px;color:#111827;white-space:pre-wrap">${reason}</p>
+<p style="margin:0;font-size:14px;color:#111827;white-space:pre-wrap">${sanitizeHtml(reason)}</p>
 </div>
 
 <div style="background:#f7fafc;border-radius:8px;padding:16px;margin-bottom:20px">
@@ -101,6 +102,6 @@ ${imagesHtml}
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Return request error:", error);
-    return NextResponse.json({ error: error.message || "Failed to send request" }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

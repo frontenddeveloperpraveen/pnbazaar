@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
 import { sendOrderConfirmedEmail } from "../../../lib/email";
+import { secureOrderId, verifyAdminAuth, checkRateLimit, checkOrigin, getGenericError } from "../../../lib/security";
 
 export async function GET(request: Request) {
+  if (!checkRateLimit("orders-list:" + (request.headers.get("x-forwarded-for") || "unknown"), 30, 60000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   try {
     const db = await getDatabase();
     const collection = db.collection("orders");
@@ -13,6 +17,14 @@ export async function GET(request: Request) {
     const query: Record<string, any> = {};
     if (email) {
       query["customerInfo.email"] = email;
+    }
+
+    // Require auth to list orders
+    if (!email) {
+      // Listing all orders requires admin auth
+      if (!verifyAdminAuth(request)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
     }
     
     const orders = await collection.find(query).sort({ _id: -1 }).toArray();
@@ -25,11 +37,14 @@ export async function GET(request: Request) {
     return NextResponse.json(formattedOrders);
   } catch (error: any) {
     console.error("GET orders error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  if (!checkRateLimit("orders-create:" + (request.headers.get("x-forwarded-for") || "unknown"), 5, 60000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   try {
     const db = await getDatabase();
     const collection = db.collection("orders");
@@ -37,7 +52,7 @@ export async function POST(request: Request) {
     
     const newOrder = {
       ...body,
-      id: body.id || "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      id: body.id || secureOrderId(),
       date: body.date || new Date().toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -79,6 +94,6 @@ export async function POST(request: Request) {
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error: any) {
     console.error("POST order error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

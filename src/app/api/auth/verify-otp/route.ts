@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../../lib/mongodb";
 import { signJwt } from "../../../../lib/jwt";
+import { getGenericError } from "../../../../lib/security";
 
-const JWT_SECRET = process.env.JWT_ADMIN_SECRET || "jwt_admin_super_secret_key_123456";
+const JWT_SECRET = process.env.JWT_ADMIN_SECRET || "";
 
 export async function POST(request: Request) {
   try {
+    if (!JWT_SECRET) {
+      return NextResponse.json({ error: "Server configuration incomplete" }, { status: 500 });
+    }
     const { email, otp } = await request.json();
     if (!email || !otp) {
       return NextResponse.json({ error: "Email and OTP are required" }, { status: 400 });
@@ -30,7 +34,7 @@ export async function POST(request: Request) {
     const token = signJwt({ email, name: record.name }, JWT_SECRET, 86400);
 
     return NextResponse.json({ success: true, token, email, name: record.name });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

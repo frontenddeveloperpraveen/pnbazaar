@@ -699,7 +699,7 @@ export default function CheckoutClient({ sessionId }: CheckoutClientProps) {
       const rzpOrderId = checkoutData.razorpay.orderId;
 
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_pnbazaarKey123",
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
         amount: checkoutData.razorpay.amount,
         currency: checkoutData.razorpay.currency,
         name: "PN Bazaar",

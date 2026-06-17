@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../../lib/mongodb";
+import { getGenericError } from "../../../../lib/security";
 
 export async function PUT(
   request: Request,
@@ -26,7 +27,7 @@ export async function PUT(
     return NextResponse.json({ success: true, id, updated: updateData });
   } catch (error: any) {
     console.error("PUT product error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -48,6 +49,6 @@ export async function DELETE(
     return NextResponse.json({ success: true, id });
   } catch (error: any) {
     console.error("DELETE product error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

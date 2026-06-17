@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../../lib/mongodb";
 import { sendOrderShippedEmail, sendOrderCancelledEmail, sendOrderDeliveredEmail } from "../../../../lib/email";
+import { verifyAdminAuth, checkRateLimit, checkOrigin, getGenericError } from "../../../../lib/security";
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!verifyAdminAuth(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!checkRateLimit("order-delete:" + (request.headers.get("x-forwarded-for") || "unknown"), 10, 60000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   try {
     const { id } = await params;
     const db = await getDatabase();
@@ -16,7 +23,7 @@ export async function DELETE(
     }
     return NextResponse.json({ success: true, message: "Order deleted" });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -24,6 +31,12 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!verifyAdminAuth(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!checkRateLimit("order-update:" + (request.headers.get("x-forwarded-for") || "unknown"), 20, 60000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   try {
     const { id } = await params;
     const db = await getDatabase();
@@ -89,6 +102,6 @@ export async function PUT(
     return NextResponse.json({ success: true, id, status: body.status || existingOrder.status });
   } catch (error: any) {
     console.error("PUT order status error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

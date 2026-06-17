@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { getDatabase } from "../../../../lib/mongodb";
 import { sendOrderConfirmedEmail } from "../../../../lib/email";
+import { checkRateLimit, checkOrigin, getGenericError } from "../../../../lib/security";
 
 export async function POST(request: Request) {
   try {
+    if (!checkRateLimit("verify:" + (request.headers.get("x-forwarded-for") || "unknown"), 10, 60000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+    if (!checkOrigin(request)) {
+      return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+    }
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = await request.json();
 
     if (!orderId) {
@@ -32,6 +40,12 @@ export async function POST(request: Request) {
     }
 
     const db = await getDatabase();
+    // Idempotency check - prevent double processing
+    const existingOrder = await db.collection("orders").findOne({ id: orderId });
+    if (existingOrder?.paymentVerified) {
+      return NextResponse.json({ success: true, order: existingOrder });
+    }
+
     const result = await db.collection("orders").findOneAndUpdate(
       { id: orderId },
       {
@@ -83,6 +97,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, order: result });
   } catch (error: any) {
     console.error("Razorpay verification error:", error);
-    return NextResponse.json({ error: error.message || "Verification failed" }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

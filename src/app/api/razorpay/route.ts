@@ -1,10 +1,35 @@
 import { NextResponse } from "next/server";
-import Razorpay from "razorpay";
+import { getDatabase } from "../../../lib/mongodb";
+import { checkRateLimit, checkOrigin, getGenericError } from "../../../lib/security";
 
 export async function POST(request: Request) {
   try {
+    if (!checkRateLimit("razorpay:" + (request.headers.get("x-forwarded-for") || "unknown"), 10, 60000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+    if (!checkOrigin(request)) {
+      return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+    }
+
     const body = await request.json();
-    const amount = body.amount;
+    const { orderId } = body;
+
+    if (!orderId) {
+      return NextResponse.json({ error: "Order ID required" }, { status: 400 });
+    }
+
+    const db = await getDatabase();
+    const order = await db.collection("orders").findOne({ id: orderId });
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    if (order.paymentVerified) {
+      return NextResponse.json({ error: "Order already paid" }, { status: 400 });
+    }
+
+    const amount = order.total;
 
     if (!amount || isNaN(amount) || amount <= 0) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
@@ -20,26 +45,24 @@ export async function POST(request: Request) {
       );
     }
 
-    const razorpay = new Razorpay({
-      key_id,
-      key_secret,
-    });
+    const Razorpay = (await import("razorpay")).default;
+    const razorpay = new Razorpay({ key_id, key_secret });
 
     const options = {
-      amount: Math.round(amount * 100), // amount in paise
+      amount: Math.round(amount * 100),
       currency: "INR",
-      receipt: "receipt_order_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9),
+      receipt: "receipt_" + orderId,
     };
 
-    const order = await razorpay.orders.create(options);
+    const rzpOrder = await razorpay.orders.create(options);
     return NextResponse.json({
       success: true,
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
+      orderId: rzpOrder.id,
+      amount: rzpOrder.amount,
+      currency: rzpOrder.currency,
     });
   } catch (error: any) {
     console.error("Razorpay order creation error:", error);
-    return NextResponse.json({ error: error.message || "Failed to create Razorpay order" }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

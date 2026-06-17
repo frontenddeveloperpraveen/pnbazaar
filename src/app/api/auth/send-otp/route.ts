@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../../lib/mongodb";
 import { sendOtpEmail } from "../../../../lib/email";
+import { checkRateLimit, getGenericError } from "../../../../lib/security";
 
 export async function POST(request: Request) {
   try {
+    if (!checkRateLimit("send-otp:" + (request.headers.get("x-forwarded-for") || "unknown"), 5, 60000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
     const { email, name } = await request.json();
     if (!email || !name) {
       return NextResponse.json({ error: "Email and name are required" }, { status: 400 });
@@ -23,6 +27,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, message: "OTP sent to email" });
   } catch (error: any) {
     console.error("send-otp error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

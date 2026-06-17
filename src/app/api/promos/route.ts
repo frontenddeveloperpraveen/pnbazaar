@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
+import { getGenericError } from "../../../lib/security";
 
 export async function GET() {
   try {
@@ -15,7 +16,7 @@ export async function GET() {
     return NextResponse.json(formattedPromos);
   } catch (error: any) {
     console.error("GET promos error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -30,7 +31,7 @@ export async function DELETE(request: Request) {
     if (result.deletedCount === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
     return NextResponse.json(newPromo, { status: 201 });
   } catch (error: any) {
     console.error("POST promo error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -89,7 +90,7 @@ export async function PUT(request: Request) {
     await collection.updateOne({ code: cleanCode }, { $set: updateData });
     return NextResponse.json({ code: cleanCode, ...updateData });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 

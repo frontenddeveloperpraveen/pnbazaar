@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../../lib/mongodb";
+import { checkRateLimit, getGenericError } from "../../../../lib/security";
 
 export async function POST(request: Request) {
+  if (!checkRateLimit("claim-view:" + (request.headers.get("x-forwarded-for") || "unknown"), 5, 60000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   try {
     const { orderId, token } = await request.json();
     if (!orderId || !token) {
@@ -47,6 +51,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Verification failed" }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }

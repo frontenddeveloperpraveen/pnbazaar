@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
+import { getGenericError } from "../../../lib/security";
 
 export async function GET() {
   try {
@@ -94,7 +95,7 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error("GET analytics error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error: any) {
     console.error("POST analytics error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 

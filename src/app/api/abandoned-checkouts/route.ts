@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "../../../lib/mongodb";
+import { verifyAdminAuth, checkRateLimit, getGenericError } from "../../../lib/security";
 
-export async function GET() {
+export async function GET(request: Request) {
+    if (!verifyAdminAuth(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   try {
     const db = await getDatabase();
     const collection = db.collection("abandoned_checkouts");
@@ -12,7 +16,7 @@ export async function GET() {
     });
     return NextResponse.json(formatted);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -40,11 +44,14 @@ export async function POST(request: Request) {
     const result = await collection.insertOne(doc);
     return NextResponse.json({ ...doc, _id: result.insertedId.toString() }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
+    if (!checkRateLimit("abandoned-checkouts:" + (request.headers.get("x-forwarded-for") || "unknown"), 30, 60000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
   try {
     const db = await getDatabase();
     const collection = db.collection("abandoned_checkouts");
@@ -61,7 +68,7 @@ export async function PUT(request: Request) {
     const { _id, ...rest } = result;
     return NextResponse.json({ ...rest, _id: _id.toString() });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
 
@@ -75,6 +82,6 @@ export async function DELETE(request: Request) {
     await collection.deleteOne({ sessionId });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(getGenericError(), { status: 500 });
   }
 }
